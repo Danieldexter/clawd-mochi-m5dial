@@ -1,0 +1,21 @@
+{
+  "terminal.integrated.defaultProfile.windows": "PowerShell",
+  "files.encoding": "utf8",
+  "files.eol": "\n",
+  "files.insertFinalNewline": true,
+  "files.trimTrailingWhitespace": true,
+  "files.associations": {
+    "*.ino": "cpp"
+  },
+  "search.exclude": {
+    ".pio/**": true,
+    "docs/workflow.md": true
+  },
+  "[markdown]": {
+    "editor.wordWrap": "on"
+  },
+  "[cpp]": {
+    "editor.tabSize": 4
+  },
+  "C_Cpp.default.cppStandard": "c++17"
+}
