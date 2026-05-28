@@ -161,8 +161,8 @@
 ```ini
 lib_deps =
     m5stack/M5Dial            ; 自动拉入 M5Unified + M5GFX/LovyanGFX
-    me-no-dev/ESPAsyncWebServer
-    me-no-dev/AsyncTCP
+    ESP32Async/ESPAsyncWebServer    ; Arduino Core 3.x 起须用 ESP32Async fork（me-no-dev 已停维护）
+    ESP32Async/AsyncTCP
     bblanchon/ArduinoJson
 ```
 
@@ -203,6 +203,21 @@ lib_deps =
 | **新增**：触摸手势 | Tap = 触发眨眼或笑；Long-press = 强制切下一模式；Drag（仅 Canvas）= 画线 |
 | **新增**：蜂鸣器音效 | 模式切换 80 ms 短鸣；Canvas 落笔 20 ms 极短"嗒"；Web 客户端连接成功上扬双音 |
 
+### mumuer1024 二次开发功能（v0.2.0 范围）
+
+参考 [mumuer1024/clawd-mochi-public](https://github.com/mumuer1024/clawd-mochi-public)（原项目的二次开发版）。下表为新增功能与 M5Dial 适配策略；原项目 4 mode 保持不变作为 v0.1.0 基础。
+
+| 二次开发新功能 | M5Dial 适配策略 |
+|--------------|----------------|
+| **WiFi AP 配网** — 首启无凭据建 `Clawd-Mochi-Setup` 开放热点 → 用户填 SSID / 密码 / PC IP → 存 Preferences (NVS) → 重启 STA | 沿用流程；M5Dial 无 GPIO 5，**复位配网改用 BtnA 长按 ≥ 5s**（屏下 WAKE 按钮，M5Dial 库走 `M5Dial.BtnA.pressedFor(5000)`） |
+| **PC Monitor mode** — 设备每 50s 调 `http://<PC_IP>:8080/stats.json`，显示 load / mem / temp / uptime / 时钟 | 圆形布局：中心大字 CPU%，下方一行 mem%，左右弧形条带 temp / uptime；时钟数字居中。文字遵守 §6 安全区（半径 ≤ 110） |
+| **Reminder 系统** — ≤ 5 条定时提醒，触发时全屏消息 30s 后回原 mode；REST CRUD | 提醒列表存 NVS；定时器走 FreeRTOS task；触发通过 ModeManager 切到内置 reminder overlay 模式，超时自动 setMode 回原 |
+| **Face System** — 7 静 + 10 动共 17 表情，**全部代码绘制 6×6 像素块**（非位图，单文件 `faces_code.h` ~ 1100 行） | 算法直接照搬到 `src/faces/faces_data.{h,cpp}`；落点经圆形 mask 裁剪（§6）；单 mode `face_show` 承载所有 face_id |
+| **Settings 页** — Web 改 PC IP / 重置 WiFi 配置 / 重启 | 复用 AsyncWebServer 多挂一个静态页 + 几个 WS message type；Reset WiFi 调 `Preferences.clear()` 后 `ESP.restart()` |
+| **PC Monitor Python 服务** — Flask + pystray + autostart（Win/Mac/Linux）+ PyInstaller 打包 | 整套 `pc_monitor/` 目录从 mumuer1024 原样搬入项目根；端口 8080，API `GET /stats.json`；与固件解耦 |
+
+> **API 风格决策**：mumuer1024 上述功能用 HTTP GET 命令实现（`/cmd?k=` / `/reminder` CRUD 等）；本项目按 CLAUDE.md §4 原设计统一走 **AsyncWebServer + WebSocket**——每个 HTTP endpoint 翻译成一个 WS message type（如 `{type:"reminder_add", time, msg}`）；好处是 reminder 触发 / monitor 刷新可由设备主动推送给 web 客户端，无需轮询。
+
 ---
 
 ## 6. UI Adaptation for Round Display
@@ -242,32 +257,53 @@ lib_deps =
 ```
 clawd-mochi/
 ├── CLAUDE.md                  # 本文档
-├── README.md                  # 用户向说明（后续生成）
+├── README.md                  # 用户向（中文）
+├── README.en.md               # 用户向（英文）
+├── CHANGELOG.md
+├── LICENSE
 ├── platformio.ini             # 构建配置
 ├── src/
 │   ├── main.cpp               # setup() / loop()，调用 ModeManager
-│   ├── config.h               # 引脚常量、AP 凭据、调色板等集中定义
+│   ├── config.h               # 跨 mode 常量（圆屏几何、AP 凭据等）
 │   ├── mode_manager.{h,cpp}   # 模式注册、切换、事件分发
 │   ├── modes/
 │   │   ├── i_mode.h           # 模式接口 IMode
-│   │   ├── eyes_normal.{h,cpp}
-│   │   ├── eyes_squish.{h,cpp}
-│   │   ├── claude_code.{h,cpp}
-│   │   └── canvas.{h,cpp}
+│   │   ├── eyes_normal.{h,cpp}     # v0.1.0
+│   │   ├── eyes_squish.{h,cpp}     # v0.1.0
+│   │   ├── claude_code.{h,cpp}     # v0.1.0
+│   │   ├── canvas.{h,cpp}          # v0.1.0
+│   │   ├── pc_monitor.{h,cpp}      # v0.2.0：CPU/内存/温度/uptime 圆形面板
+│   │   └── face_show.{h,cpp}       # v0.2.0：单 mode + face_id 承载 17 表情
+│   ├── faces/
+│   │   └── faces_data.{h,cpp}      # v0.2.0：17 表情 6×6 像素块 procedural 数据 + 绘制
+│   ├── services/
+│   │   ├── provisioning.{h,cpp}    # v0.2.0：首启 AP 配网 + NVS 存储
+│   │   └── reminder.{h,cpp}        # v0.2.0：≤5 条提醒 + 定时器
 │   ├── input/
-│   │   ├── encoder.{h,cpp}    # 编码器去抖与事件
-│   │   └── touch.{h,cpp}      # tap / long-press / drag 识别
+│   │   ├── encoder.{h,cpp}         # v0.3.0：编码器去抖与事件
+│   │   └── touch.{h,cpp}           # v0.3.0：tap / long-press / drag
 │   ├── web/
-│   │   ├── ap_server.{h,cpp}  # AP + AsyncWebServer + LittleFS
-│   │   └── ws_handler.{h,cpp} # WebSocket → Event 转换
+│   │   ├── ap_server.{h,cpp}       # AP + AsyncWebServer + LittleFS
+│   │   ├── ws_protocol.h           # v0.1.0：WS 消息类型（mode/stroke/state/reminder/face/monitor）
+│   │   └── ws_handler.{h,cpp}      # WebSocket ↔ Event 双向转换
 │   └── audio/
-│       └── beeper.{h,cpp}     # 用 LEDC 驱动 G3 蜂鸣器
+│       └── beeper.{h,cpp}          # v0.3.0：LEDC 驱 G3 蜂鸣器
 ├── data/                      # 通过 `pio run -t uploadfs` 烧到 LittleFS
-│   ├── index.html             # Web 控制面板
+│   ├── index.html             # v0.1.0：主控制面板
+│   ├── setup.html             # v0.2.0：首启配网页（AP 模式独占）
+│   ├── settings.html          # v0.2.0：改 PC IP / 重置 WiFi
 │   ├── style.css
-│   └── app.js                 # 含圆形预览 canvas，与设备 WS 同步
+│   └── app.js                 # 圆形预览 canvas + WS 客户端
+├── pc_monitor/                # v0.2.0：PC 端 Python Flask 服务（从 mumuer1024 移植）
+│   ├── pc_monitor.py
+│   ├── config.json
+│   ├── requirements.txt
+│   ├── start.bat / start.sh
+│   ├── icon/
+│   └── README.md
 └── docs/
-    └── pinout.md              # M5Dial 引脚速查（从本文件第 3 节摘出）
+    ├── pinout.md              # M5Dial 引脚速查（从 §3 摘出）
+    └── workflow.md            # 接手文档（git 忽略）
 ```
 
 ---
@@ -298,10 +334,11 @@ PowerShell 用户注意：PowerShell 5.1 不支持 `&&` 链式调用，命令分
 
 ### 必须做的事
 - **G46 HOLD pin 必须在 `setup()` 早期 `digitalWrite(46, HIGH)`**——否则板子开机后立刻断电
-- 实际上 `M5Dial.begin(cfg, true)` 第二参数会处理 HOLD，但**任何绕过 M5Dial 库的代码**（如纯 ESP-IDF demo）必须自己处理
+- 实际上 `M5Dial.begin()` 内部已**无条件**处理 G46（通过 M5Unified Power 模块），但**任何绕过 M5Dial 库的代码**（如纯 ESP-IDF demo）必须自己处理。`begin(cfg, enableEncoder, enableRFID)` 的后两个参数与 HOLD 无关
 - `M5Dial.update()` 必须每个 `loop()` 调一次，否则编码器与触摸事件不更新
 
 ### 不要做的事
+- ❌ **插 USB-C 上电时切勿按住 G0**——长按 G0 + 通电 = ESP32-S3 直接停在 ROM bootloader 等下载命令，**完全不运行用户代码**。症状：烧录成功但 Serial 几乎沉默（仅 `ESP-ROM:esp32s3-20210327` 一行 banner，之后什么都没有）。正常上电就别按 G0；只有进 DFU 烧录失败时才用"按住 G0 → 按一下 RST → 松 RST → 松 G0"手势
 - ❌ **不要在中断 ISR 里调用任何 M5GFX / Serial / Wire / log_x() 函数** —— 这些不是 ISR-safe，会随机崩溃。ISR 里只 set flag，主循环处理
 - ❌ 不要把 SPI 频率拉到 80 MHz 以上——GC9A01 实测 40 MHz 稳定，60 MHz 边缘场景下花屏
 - ❌ 不要同时启用 WiFi STA + AP——会显著掉帧。本项目纯 AP
@@ -316,18 +353,22 @@ PowerShell 用户注意：PowerShell 5.1 不支持 `&&` 链式调用，命令分
 
 ---
 
-## 10. Out of Scope (v1)
+## 10. Out of Scope
 
-明确**不做**，避免 scope creep：
+收纳"**永久不做**"与"**v0.3.0+ M5Dial 增强候选**"两类，避免 scope creep；详细 phase 排布见 `docs/workflow.md`。
 
-- [ ] RFID 卡片触发动画（需重新设计屏幕/RFID RST 复用时序）
-- [ ] RTC 时钟模式与闹钟
-- [ ] 电池电量显示与深度休眠唤醒
+### 永久不做（明确划出）
 - [ ] OTA 固件升级
 - [ ] MQTT / Home Assistant 集成
 - [ ] 多语言切换（v1 全英文 + 部分中文标签即可）
 - [ ] 3D 外壳设计（M5Dial 自带外壳，无需重新建模）
 - [ ] 多设备 mesh / BLE 通信
+
+### v0.3.0+ 候选（M5Dial 硬件增强专属）
+- [ ] RFID 卡片触发表情 / 动画（需重新设计屏幕 / RFID RST 复用时序）
+- [ ] RTC 闹钟联动 Reminder 系统
+- [ ] 电池电量显示与深度休眠唤醒
+- [ ] 编码器 / 触摸完整替代 Web 控制（脱机操作）
 
 这些条目记录在此是为了未来回看时**有意识地**决定要不要加，而不是默默被忘掉。
 
@@ -370,6 +411,7 @@ PowerShell 用户注意：PowerShell 5.1 不支持 `&&` 链式调用，命令分
 
 ### 项目相关
 - 原项目仓库：https://github.com/yousifamanuel/clawd-mochi
+- **二次开发参考**：https://github.com/mumuer1024/clawd-mochi-public （AP 配网 / PC Monitor / Reminder / Face System / Settings 的实现参照，v0.2.0 范围）
 - 原项目 MakerWorld（3D 模型）：见原仓库 README
 
 ### 硬件
@@ -383,7 +425,7 @@ PowerShell 用户注意：PowerShell 5.1 不支持 `&&` 链式调用，命令分
 - M5Unified（核心抽象层）：https://github.com/m5stack/M5Unified
 - M5GFX（显示库）：https://github.com/m5stack/M5GFX
 - LovyanGFX（M5GFX 上游）：https://github.com/lovyan03/LovyanGFX
-- ESPAsyncWebServer：https://github.com/me-no-dev/ESPAsyncWebServer
+- ESPAsyncWebServer：https://github.com/ESP32Async/ESPAsyncWebServer
 
 ### 工具
 - PlatformIO 文档：https://docs.platformio.org/

@@ -1,0 +1,115 @@
+* { box-sizing: border-box; }
+html, body {
+    margin: 0;
+    padding: 0;
+    min-height: 100vh;
+    background: #1a1a1a;
+    color: #ddd;
+    font: 16px -apple-system, system-ui, sans-serif;
+}
+body {
+    display: flex;
+    flex-direction: column;
+    padding: 16px;
+    max-width: 480px;
+    margin: 0 auto;
+}
+#status {
+    text-align: center;
+    font-weight: 600;
+    letter-spacing: 0.5px;
+    padding: 10px;
+    margin-bottom: 12px;
+    border-radius: 4px;
+    background: #222;
+}
+#status.connecting   { color: #888; }
+#status.connected    { color: #5dd; }
+#status.disconnected { color: #f55; }
+
+.controls h3 {
+    margin: 16px 0 6px;
+    font-size: 12px;
+    color: #888;
+    text-transform: uppercase;
+    letter-spacing: 1px;
+}
+.row {
+    display: flex;
+    gap: 8px;
+    flex-wrap: wrap;
+    align-items: center;
+}
+button {
+    flex: 1;
+    min-width: 80px;
+    padding: 10px 12px;
+    background: #333;
+    border: 1px solid #444;
+    color: #ddd;
+    border-radius: 4px;
+    font-size: 14px;
+    cursor: pointer;
+}
+button:hover { background: #404040; }
+button.active {
+    background: #5dd;
+    color: #1a1a1a;
+    border-color: #5dd;
+    font-weight: 600;
+}
+label {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    flex: 1;
+}
+input[type="color"] {
+    width: 40px;
+    height: 32px;
+    padding: 0;
+    border: 1px solid #444;
+    background: transparent;
+    cursor: pointer;
+    border-radius: 3px;
+}
+input[type="checkbox"] {
+    width: 18px;
+    height: 18px;
+}
+input[type="text"] {
+    flex: 1;
+    padding: 10px;
+    background: #222;
+    border: 1px solid #444;
+    color: #ddd;
+    border-radius: 4px;
+    font: 14px monospace;
+    width: 100%;
+}
+
+/* 弱隐藏（plan 决策 #6）：不彻底 display:none 避免布局跳动 */
+[disabled],
+.canvas-only.disabled,
+.claude-only.disabled {
+    opacity: 0.35;
+    pointer-events: none;
+}
+
+/* Phase 7 Drawing Pad */
+.pad-row {
+    justify-content: center;
+    padding: 8px 0;
+}
+#pad {
+    width: 100%;
+    max-width: 280px;
+    aspect-ratio: 1 / 1;
+    height: auto;
+    border-radius: 50%;
+    background: #fff;
+    border: 2px solid #444;
+    touch-action: none;  /* 防止触摸滑动滚屏 */
+    cursor: crosshair;
+    display: block;
+}

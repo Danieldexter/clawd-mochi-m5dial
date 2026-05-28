@@ -17,6 +17,20 @@
 *.elf
 *.map
 
+# PIO CLI 二进制（用户机器特定，不入仓）
+platformio.exe
+
+# Python (pc_monitor/)
+__pycache__/
+*.pyc
+*.pyo
+*.pyd
+.venv/
+venv/
+dist/
+build/
+*.spec
+
 # OS
 Thumbs.db
 Desktop.ini

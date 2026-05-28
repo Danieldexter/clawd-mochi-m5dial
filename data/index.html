@@ -1,0 +1,53 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Clawd Mochi</title>
+<link rel="stylesheet" href="style.css">
+</head>
+<body>
+  <div id="status" class="connecting">connecting...</div>
+
+  <section class="controls">
+    <h3>Mode</h3>
+    <div class="row">
+      <button class="mode-btn" data-mode="normal_eyes">Normal Eyes</button>
+      <button class="mode-btn" data-mode="squish_eyes">Squish Eyes</button>
+      <button class="mode-btn" data-mode="claude_code">Claude Code</button>
+      <button class="mode-btn" data-mode="canvas">Canvas</button>
+    </div>
+
+    <h3>Speed</h3>
+    <div class="row">
+      <button class="speed-btn" data-speed="1">Fast</button>
+      <button class="speed-btn" data-speed="2">Normal</button>
+      <button class="speed-btn" data-speed="3">Slow</button>
+    </div>
+
+    <h3>Colors</h3>
+    <div class="row">
+      <label>BG <input type="color" id="bg-color" value="#DA1100"></label>
+      <label class="canvas-only">Pen <input type="color" id="pen-color" value="#000000"></label>
+    </div>
+
+    <h3>Other</h3>
+    <div class="row">
+      <label class="switch">Backlight <input type="checkbox" id="backlight" checked></label>
+      <button id="clear-canvas" class="canvas-only">Clear Canvas</button>
+    </div>
+
+    <h3 class="claude-only">Terminal</h3>
+    <div class="row claude-only">
+      <input type="text" id="term-input" placeholder="Type to send..." autocomplete="off">
+    </div>
+
+    <h3 class="canvas-only">Drawing Pad</h3>
+    <div class="row canvas-only pad-row">
+      <canvas id="pad" width="240" height="240"></canvas>
+    </div>
+  </section>
+
+  <script src="app.js"></script>
+</body>
+</html>
