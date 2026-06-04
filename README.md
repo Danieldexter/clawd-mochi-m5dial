@@ -25,14 +25,14 @@ English: [README.en.md](./README.en.md)
 Claude Code 联动 —— 设备实时反映会话态，Web 端查看 / 切换风格：
 
 <p align="center">
-  <img src="docs/images/claude%20Link%20%E8%AE%BE%E5%A4%87%E6%BC%94%E7%A4%BA.png" width="320" alt="设备 Claude 联动演示">
+  <img src="docs/images/claude%20Link%20%E8%AE%BE%E5%A4%87%E6%BC%94%E7%A4%BA.jpg" width="320" alt="设备 Claude 联动演示">
   <img src="docs/images/WEB%20claude%20Link.png" width="320" alt="Web Claude Link 控制">
 </p>
 
 PC Monitor —— 设备圆形面板，Web 端实时镜像：
 
 <p align="center">
-  <img src="docs/images/pc%20monitor%20%E8%AE%BE%E5%A4%87%E6%BC%94%E7%A4%BA.png" width="320" alt="设备 PC Monitor 演示">
+  <img src="docs/images/pc%20monitor%20%E8%AE%BE%E5%A4%87%E6%BC%94%E7%A4%BA.jpg" width="320" alt="设备 PC Monitor 演示">
   <img src="docs/images/WEB%20PC%20Monitor.png" width="320" alt="Web PC Monitor 镜像">
 </p>
 
