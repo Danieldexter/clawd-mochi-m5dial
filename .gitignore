@@ -31,6 +31,10 @@ dist/
 build/
 *.spec
 
+# pc_monitor 运行库（自行下载放置，MPL-2.0，不入仓）+ 运行期生成
+pc_monitor/lib/*.dll
+pc_monitor/traffic.json
+
 # OS
 Thumbs.db
 Desktop.ini

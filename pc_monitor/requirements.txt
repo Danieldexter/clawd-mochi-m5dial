@@ -3,3 +3,4 @@ flask-cors
 psutil
 pystray
 pillow
+pythonnet>=3.0 ; sys_platform == "win32"

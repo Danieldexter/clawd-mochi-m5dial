@@ -1,0 +1,147 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Clawd Mochi — Settings</title>
+<link rel="stylesheet" href="style.css">
+<style>
+  .topbar { display:flex; justify-content:space-between; align-items:center; margin-bottom:8px; }
+  .topbar a { color:#5dd; text-decoration:none; font-size:14px; }
+  .field { margin:6px 0; color:#888; font-size:13px; }
+  .field b { color:#ddd; font-family:monospace; }
+  button.danger { background:#3a2222; border-color:#633; color:#f88; }
+  button.danger:hover { background:#4a2626; }
+  .note { color:#666; font-size:12px; margin-top:6px; }
+  select {
+    flex:1;
+    min-width:220px;
+    padding:10px;
+    background:#222;
+    border:1px solid #444;
+    color:#ddd;
+    border-radius:4px;
+    font:14px system-ui;
+  }
+  option { background:#222; color:#ddd; }
+</style>
+</head>
+<body>
+  <div class="topbar"><a href="index.html">&#8592; Back</a></div>
+  <div id="status" class="connecting">connecting...</div>
+
+  <section class="controls">
+    <h3>WiFi</h3>
+    <div class="field">Connected to <b id="ssid">—</b></div>
+
+    <h3>PC Monitor</h3>
+    <div class="row">
+      <input type="text" id="pcip" placeholder="PC IP e.g. 192.168.1.100" autocomplete="off">
+      <button id="save-pcip">Save</button>
+    </div>
+
+    <h3>Claude Link Style</h3>
+    <div class="row">
+      <button class="style-btn" data-style="clawd">Clawd Eyes</button>
+      <button class="style-btn" data-style="sparkle">Sparkle</button>
+    </div>
+    <p class="note">Expression style for the Claude Code linkage mode.</p>
+
+    <h3>Claude Project Scope</h3>
+    <div class="row">
+      <select id="cc-scope"></select>
+    </div>
+    <p class="note">Projects appear after their hook sends a status once.</p>
+
+    <h3>System</h3>
+    <div class="row">
+      <button id="restart">Restart</button>
+      <button id="reset" class="danger">Reset WiFi</button>
+    </div>
+    <p class="note">Reset WiFi clears stored credentials and reboots into setup mode.</p>
+  </section>
+
+<script>
+const statusEl = document.getElementById('status');
+const ssidEl   = document.getElementById('ssid');
+const pcipEl   = document.getElementById('pcip');
+const styleBtns= document.querySelectorAll('.style-btn');
+const scopeEl  = document.getElementById('cc-scope');
+let ws = null, reconnectTimer = null;
+
+function setConnState(cls, text) { statusEl.className = cls; statusEl.textContent = text; }
+function send(msg) { if (ws && ws.readyState === WebSocket.OPEN) ws.send(JSON.stringify(msg)); }
+function projectLabel(path) {
+  if (!path) return 'All projects';
+  const parts = path.split(/[\\/]+/).filter(Boolean);
+  return parts.length ? parts[parts.length - 1] : path;
+}
+function renderProjectScope(projects, selected) {
+  const current = (document.activeElement === scopeEl) ? scopeEl.value : (selected || '');
+  scopeEl.innerHTML = '';
+  const all = document.createElement('option');
+  all.value = '';
+  all.textContent = 'All projects';
+  scopeEl.appendChild(all);
+  let hasCurrent = !current;
+  (projects || []).forEach(path => {
+    const opt = document.createElement('option');
+    opt.value = path;
+    opt.textContent = projectLabel(path);
+    opt.title = path;
+    scopeEl.appendChild(opt);
+    if (path === current) hasCurrent = true;
+  });
+  if (!hasCurrent) {
+    const opt = document.createElement('option');
+    opt.value = current;
+    opt.textContent = projectLabel(current);
+    opt.title = current;
+    scopeEl.appendChild(opt);
+  }
+  scopeEl.value = current;
+}
+
+function applyState(s) {
+  if (s.ssid) ssidEl.textContent = s.ssid;
+  // 设备值回填，但用户正在输入时不覆盖
+  if (s.pc_ip !== undefined && document.activeElement !== pcipEl) pcipEl.value = s.pc_ip || '';
+  // Phase 11：联动模式风格选择器回填
+  if (s.cc_style) styleBtns.forEach(b => b.classList.toggle('active', b.dataset.style === s.cc_style));
+  renderProjectScope(Array.isArray(s.cc_projects) ? s.cc_projects : [], s.cc_scope || '');
+}
+
+function connect() {
+  clearTimeout(reconnectTimer);
+  setConnState('connecting', 'connecting...');
+  ws = new WebSocket(`ws://${location.host}/ws`);
+  ws.onopen  = () => setConnState('connected', 'connected');
+  ws.onclose = () => { setConnState('disconnected', 'disconnected'); reconnectTimer = setTimeout(connect, 5000); };
+  ws.onerror = () => setConnState('disconnected', 'disconnected');
+  ws.onmessage = (e) => {
+    try { const m = JSON.parse(e.data); if (m.type === 'state') applyState(m); }
+    catch (err) { console.warn('bad msg', e.data, err); }
+  };
+}
+
+document.getElementById('save-pcip').addEventListener('click', () => {
+  send({ type: 'set_pc_ip', ip: pcipEl.value.trim() });
+});
+document.getElementById('restart').addEventListener('click', () => {
+  if (confirm('Restart device?')) send({ type: 'restart' });
+});
+document.getElementById('reset').addEventListener('click', () => {
+  if (confirm('Clear WiFi credentials and reboot into setup mode?')) send({ type: 'wifi_reset' });
+});
+styleBtns.forEach(b => b.addEventListener('click', () => {
+  send({ type: 'set_cc_style', style: b.dataset.style });
+  styleBtns.forEach(x => x.classList.toggle('active', x === b));
+}));
+scopeEl.addEventListener('change', () => {
+  send({ type: 'set_cc_scope', scope: scopeEl.value });
+});
+
+connect();
+</script>
+</body>
+</html>

@@ -27,7 +27,7 @@ body {
 #status.connected    { color: #5dd; }
 #status.disconnected { color: #f55; }
 
-.controls h3 {
+h3 {
     margin: 16px 0 6px;
     font-size: 12px;
     color: #888;
@@ -87,14 +87,41 @@ input[type="text"] {
     font: 14px monospace;
     width: 100%;
 }
+select {
+    flex: 1;
+    padding: 10px;
+    background: #222;
+    border: 1px solid #444;
+    color: #ddd;
+    border-radius: 4px;
+    font: 14px system-ui, sans-serif;
+    min-width: 180px;
+}
+option {
+    background: #222;
+    color: #ddd;
+}
 
-/* 弱隐藏（plan 决策 #6）：不彻底 display:none 避免布局跳动 */
-[disabled],
-.canvas-only.disabled,
-.claude-only.disabled {
+/* 真正 disabled 的控件（如不可用的 mon-cat 复选）置灰 */
+[disabled] {
     opacity: 0.35;
     pointer-events: none;
 }
+
+/* Phase 14b PC Monitor 配置 */
+.hide { display: none; }
+.mon-cats { gap: 6px; }
+.mon-cat-chk {
+    flex: 0 0 auto;
+    gap: 5px;
+    padding: 6px 9px;
+    background: #222;
+    border: 1px solid #333;
+    border-radius: 4px;
+    font-size: 13px;
+}
+.mon-cat-chk.disabled { opacity: 0.35; }
+#mon-interval { width: 64px; flex: 0 0 auto; }
 
 /* Phase 7 Drawing Pad */
 .pad-row {
@@ -113,3 +140,149 @@ input[type="text"] {
     cursor: crosshair;
     display: block;
 }
+
+/* === Phase 15：mode 入口 + 每 mode 容器 + PC 实时镜像 === */
+
+/* 顶栏 */
+.topbar {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    margin-bottom: 8px;
+}
+.brand { font-weight: 700; letter-spacing: 0.5px; color: #eee; }
+.settings-link { color: #5dd; text-decoration: none; font-size: 14px; }
+.settings-link:hover { text-decoration: underline; }
+
+/* mode 入口网格（tile chips） */
+.modes {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(92px, 1fr));
+    gap: 8px;
+    margin-bottom: 14px;
+}
+.modes .mode-btn {
+    flex: none;
+    min-width: 0;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 4px;
+    padding: 10px 6px;
+    font-size: 12px;
+    line-height: 1.2;
+    text-align: center;
+}
+.modes .mode-btn .ic { font-size: 20px; line-height: 1; }
+
+/* 每 mode 容器：只显 .active */
+.panel { display: none; }
+.panel.active {
+    display: block;
+    background: #202024;
+    border: 1px solid #2e2e33;
+    border-radius: 8px;
+    padding: 2px 14px 14px;
+}
+.panel h3:first-child { margin-top: 10px; }
+.panel .settings-link { display: inline-block; margin-top: 10px; }
+.hint-text { font-size: 12px; color: #777; margin: 8px 0 0; }
+
+/* Claude Link 状态展示 */
+.cc-box {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 8px;
+    padding: 12px 0;
+}
+.cc-pill {
+    display: inline-block;
+    padding: 8px 22px;
+    border-radius: 999px;
+    font-weight: 700;
+    font-size: 18px;
+    text-transform: uppercase;
+    letter-spacing: 1px;
+}
+.cc-idle    { background: #444;    color: #bbb; }
+.cc-working { background: #3FB984; color: #10231a; }
+.cc-waiting { background: #F2B544; color: #2a2000; }
+.cc-scope { font-size: 13px; color: #888; }
+
+/* PC Monitor 实时镜像 */
+.pc-live-head {
+    display: flex;
+    align-items: baseline;
+    justify-content: space-between;
+    margin-bottom: 12px;
+    padding-bottom: 8px;
+    border-bottom: 1px solid #2a2a30;
+}
+.pc-live-head h3 { margin-bottom: 0; }
+#pc-clock { font-family: monospace; font-size: 18px; color: #5dd; }
+#pc-hint {
+    padding: 14px;
+    text-align: center;
+    color: #888;
+    background: #1c1c20;
+    border: 1px solid #2e2e33;
+    border-radius: 6px;
+    margin: 8px 0;
+}
+.pc-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(140px, 1fr));
+    gap: 10px;
+    margin: 0 0 4px;
+}
+.pc-card {
+    background: #1c1c20;
+    border: 1px solid #2a2a30;
+    border-left: 3px solid var(--acc);
+    border-radius: 6px;
+    padding: 11px 12px;
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+}
+.pc-cat {
+    font-size: 12px;
+    font-weight: 700;
+    letter-spacing: 1px;
+    text-transform: uppercase;
+    color: var(--acc);
+}
+.pc-main {
+    font-size: 26px;
+    font-weight: 700;
+    color: #f3f3ee;
+    margin: 0;
+    line-height: 1;
+}
+.pc-bar {
+    height: 6px;
+    background: #333;
+    border-radius: 3px;
+    overflow: hidden;
+    margin: 0;
+}
+.pc-bar-fill { height: 100%; background: var(--acc); border-radius: 3px; }
+.pc-row { font-size: 12px; color: #bbb; font-family: monospace; line-height: 1.35; }
+
+/* 全局区（跨 mode 常驻） */
+.global {
+    margin-top: 16px;
+    border-top: 1px solid #2a2a2a;
+    padding-top: 8px;
+}
+.rem-details { margin-top: 8px; }
+.rem-details summary {
+    cursor: pointer;
+    font-size: 12px;
+    color: #888;
+    text-transform: uppercase;
+    letter-spacing: 1px;
+    padding: 6px 0;
+}
+.rem-details summary:hover { color: #bbb; }

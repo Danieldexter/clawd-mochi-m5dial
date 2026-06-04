@@ -1,5 +1,7 @@
 #include "ws_protocol.h"
 
+#include "../state.h"
+
 #include <cstdio>
 #include <cstdlib>
 #include <cstring>
@@ -21,6 +23,40 @@ bool nameToModeId(const char* name, ModeId& out) {
             return true;
         }
     }
+    return false;
+}
+
+const char* monCatName(uint8_t idx) {
+    return (idx < kMonCatCount) ? kMonCatNames[idx] : "";
+}
+
+bool monCatIndex(const char* name, uint8_t& out) {
+    if (!name) return false;
+    for (uint8_t i = 0; i < kMonCatCount; ++i) {
+        if (strcmp(name, kMonCatNames[i]) == 0) { out = i; return true; }
+    }
+    return false;
+}
+
+const char* ccStatusToName(state::CcStatus s) {
+    switch (s) {
+        case state::CcStatus::WORKING: return "working";
+        case state::CcStatus::WAITING: return "waiting";
+        default:                       return "idle";
+    }
+}
+
+const char* ccStyleToName(state::CcStyle s) {
+    switch (s) {
+        case state::CcStyle::SPARKLE: return "sparkle";
+        default:                      return "clawd";
+    }
+}
+
+bool nameToCcStyle(const char* name, state::CcStyle& out) {
+    if (!name) return false;
+    if (strcmp(name, "clawd")   == 0) { out = state::CcStyle::CLAWD;   return true; }
+    if (strcmp(name, "sparkle") == 0) { out = state::CcStyle::SPARKLE; return true; }
     return false;
 }
 

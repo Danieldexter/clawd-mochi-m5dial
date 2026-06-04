@@ -1,0 +1,73 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Clawd Mochi — Setup</title>
+<style>
+  * { box-sizing: border-box; }
+  body {
+    margin: 0; padding: 28px 18px;
+    background: #1a1a1a; color: #ddd;
+    font: 16px -apple-system, system-ui, sans-serif;
+    max-width: 420px; margin: 0 auto;
+  }
+  h2 { text-align: center; color: #5dd; margin: 0 0 4px; }
+  p.sub { text-align: center; color: #888; margin: 0 0 22px; font-size: 13px; }
+  label { display: block; margin: 14px 0 4px; font-size: 12px; color: #888;
+          text-transform: uppercase; letter-spacing: 1px; }
+  input {
+    width: 100%; padding: 11px; background: #222;
+    border: 1px solid #444; color: #ddd; border-radius: 4px;
+    font: 15px monospace;
+  }
+  small { color: #666; font-size: 12px; }
+  button {
+    width: 100%; margin-top: 22px; padding: 13px;
+    background: #5dd; color: #1a1a1a; border: 0; border-radius: 4px;
+    font-size: 16px; font-weight: 600; cursor: pointer;
+  }
+</style>
+</head>
+<body>
+  <h2>Clawd Mochi</h2>
+  <p class="sub">Connect me to your WiFi</p>
+
+  <!-- 原生 GET 提交：captive portal 迷你浏览器最稳；/save 直接返回成功页 -->
+  <form action="/save" method="get" autocomplete="off">
+    <label for="ssid">WiFi network</label>
+    <input id="ssid" name="ssid" list="nets" placeholder="Your WiFi name" required>
+    <datalist id="nets"></datalist>
+
+    <label for="pass">Password</label>
+    <input id="pass" name="pass" type="password" placeholder="Leave empty if open">
+
+    <label for="pcip">PC IP <small>(optional, for PC Monitor)</small></label>
+    <input id="pcip" name="pcip" placeholder="e.g. 192.168.1.100">
+
+    <button type="submit">Save &amp; Connect</button>
+  </form>
+
+<script>
+// 异步填充邻近网络列表（首扫可能仍在跑，重试几次）。失败则用户手动输入 SSID。
+let tries = 0;
+function loadScan() {
+  fetch('/scan').then(r => r.json()).then(list => {
+    if (Array.isArray(list) && list.length) {
+      const dl = document.getElementById('nets');
+      dl.innerHTML = '';
+      [...new Set(list)].forEach(s => {
+        if (!s) return;
+        const o = document.createElement('option');
+        o.value = s;
+        dl.appendChild(o);
+      });
+    } else if (tries++ < 4) {
+      setTimeout(loadScan, 1500);
+    }
+  }).catch(() => { if (tries++ < 4) setTimeout(loadScan, 1500); });
+}
+loadScan();
+</script>
+</body>
+</html>

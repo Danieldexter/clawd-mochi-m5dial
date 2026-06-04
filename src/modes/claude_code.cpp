@@ -108,8 +108,8 @@ void ClaudeCode::inputChar(char c) {
 }
 
 void ClaudeCode::onEnter() {
-    bg_color_ = state::g_state.bg_color_565 == 0xD880 ? TFT_BLACK : state::g_state.bg_color_565;
-    // 终端审美默认黑底；如果 SharedState 是 Eyes 红色（0xD880）这里强制改回黑，
+    bg_color_ = state::g_state.bg_color_565 == 0xFA00 ? TFT_BLACK : state::g_state.bg_color_565;
+    // 终端审美默认黑底；如果 SharedState 是默认底色（0xFA00 = #ff4000）这里强制改回黑，
     // 让用户切到 Claude Code 看到正确的终端配色。Web 改 bg_color 还是按 SharedState 同步。
 
     M5Dial.Display.fillScreen(bg_color_);
@@ -135,7 +135,7 @@ void ClaudeCode::tick(uint32_t now_ms) {
 }
 
 void ClaudeCode::applyState(const state::SharedState& s) {
-    if (s.bg_color_565 != bg_color_ && s.bg_color_565 != 0xD880) {
+    if (s.bg_color_565 != bg_color_ && s.bg_color_565 != 0xFA00) {
         bg_color_ = s.bg_color_565;
         M5Dial.Display.fillScreen(bg_color_);
         drawTitleBar();

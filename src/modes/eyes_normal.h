@@ -18,7 +18,7 @@ private:
     uint32_t enter_time_ = 0;
     uint8_t  frame_idx_  = 0xFF;
     uint8_t  speed_      = 2;
-    uint16_t bg_color_   = 0xD880;
+    uint16_t bg_color_   = 0xFA00;
 };
 
 }  // namespace mochi

@@ -19,7 +19,7 @@ public:
     IMode* currentMode() const { return current_; }
 
 private:
-    IMode* modes_[4]    = {nullptr, nullptr, nullptr, nullptr};
+    IMode* modes_[8]    = {nullptr, nullptr, nullptr, nullptr, nullptr, nullptr, nullptr, nullptr};
     IMode* current_     = nullptr;
     ModeId current_id_  = ModeId::NORMAL_EYES;
 };

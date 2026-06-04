@@ -5,47 +5,127 @@
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>Clawd Mochi</title>
 <link rel="stylesheet" href="style.css">
+<style>
+  .rem-list { list-style:none; padding:0; margin:6px 0 0; }
+  .rem-item { display:flex; align-items:center; gap:8px; padding:6px 8px; margin:4px 0;
+              background:#222; border:1px solid #333; border-radius:4px; font-size:13px; color:#ddd; }
+  .rem-item .rem-when { font-family:monospace; color:#5dd; }
+  .rem-item .rem-text { flex:1; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
+  .rem-item .rem-tag  { color:#888; font-size:11px; }
+  .rem-item button    { background:#3a2222; border:1px solid #633; color:#f88; padding:2px 9px; }
+</style>
 </head>
 <body>
+  <div class="topbar">
+    <span class="brand">Clawd Mochi</span>
+    <a href="settings.html" class="settings-link">Settings &#9881;</a>
+  </div>
   <div id="status" class="connecting">connecting...</div>
 
-  <section class="controls">
-    <h3>Mode</h3>
-    <div class="row">
-      <button class="mode-btn" data-mode="normal_eyes">Normal Eyes</button>
-      <button class="mode-btn" data-mode="squish_eyes">Squish Eyes</button>
-      <button class="mode-btn" data-mode="claude_code">Claude Code</button>
-      <button class="mode-btn" data-mode="canvas">Canvas</button>
+  <nav class="modes">
+    <button class="mode-btn" data-mode="normal_eyes"><span class="ic">&#128064;</span>Normal Eyes</button>
+    <button class="mode-btn" data-mode="squish_eyes"><span class="ic">&#128518;</span>Squish Eyes</button>
+    <button class="mode-btn" data-mode="claude_code"><span class="ic">&#9000;</span>Claude Code</button>
+    <button class="mode-btn" data-mode="canvas"><span class="ic">&#127912;</span>Canvas</button>
+    <button class="mode-btn" data-mode="claude_status"><span class="ic">&#10022;</span>Claude Link</button>
+    <button class="mode-btn" data-mode="face_show"><span class="ic">&#128512;</span>Faces</button>
+    <button class="mode-btn" data-mode="pc_monitor"><span class="ic">&#128202;</span>PC Monitor</button>
+  </nav>
+
+  <section class="panels">
+    <!-- Normal + Squish Eyes：共用 Speed -->
+    <div class="panel" data-panel="normal_eyes squish_eyes">
+      <h3>Speed</h3>
+      <div class="row">
+        <button class="speed-btn" data-speed="1">Fast</button>
+        <button class="speed-btn" data-speed="2">Normal</button>
+        <button class="speed-btn" data-speed="3">Slow</button>
+      </div>
     </div>
 
-    <h3>Speed</h3>
-    <div class="row">
-      <button class="speed-btn" data-speed="1">Fast</button>
-      <button class="speed-btn" data-speed="2">Normal</button>
-      <button class="speed-btn" data-speed="3">Slow</button>
+    <!-- Claude Code：终端输入 -->
+    <div class="panel" data-panel="claude_code">
+      <h3>Terminal</h3>
+      <div class="row">
+        <input type="text" id="term-input" placeholder="Type to send..." autocomplete="off">
+      </div>
+      <p class="hint-text">Keystrokes stream live to the device terminal.</p>
     </div>
 
-    <h3>Colors</h3>
-    <div class="row">
-      <label>BG <input type="color" id="bg-color" value="#DA1100"></label>
-      <label class="canvas-only">Pen <input type="color" id="pen-color" value="#000000"></label>
+    <!-- Canvas：画笔 + 清屏 + 画板 -->
+    <div class="panel" data-panel="canvas">
+      <h3>Canvas</h3>
+      <div class="row">
+        <label>Pen <input type="color" id="pen-color" value="#000000"></label>
+        <button id="clear-canvas">Clear</button>
+      </div>
+      <div class="row pad-row">
+        <canvas id="pad" width="240" height="240"></canvas>
+      </div>
     </div>
 
-    <h3>Other</h3>
+    <!-- Claude Link：会话状态展示 -->
+    <div class="panel" data-panel="claude_status">
+      <h3>Claude Link</h3>
+      <div class="cc-box">
+        <span id="cc-badge" class="cc-pill cc-idle">idle</span>
+        <div id="cc-scope-info" class="cc-scope">All projects</div>
+      </div>
+      <a href="settings.html" class="settings-link">Configure style &amp; scope &rarr;</a>
+    </div>
+
+    <!-- Faces：表情下拉 -->
+    <div class="panel" data-panel="face_show">
+      <h3>Face</h3>
+      <div class="row">
+        <label>Expression <select id="face-id"></select></label>
+      </div>
+    </div>
+
+    <!-- PC Monitor：① 实时镜像  ② 设备显示配置 -->
+    <div class="panel" data-panel="pc_monitor">
+      <div class="pc-live-head">
+        <h3>Live</h3>
+        <span id="pc-clock">--:--</span>
+      </div>
+      <div id="pc-hint" class="hide"></div>
+      <div id="pc-stats" class="pc-grid"></div>
+
+      <h3>Device Display</h3>
+      <div class="row">
+        <button class="mon-mode-btn" data-rotate="1">Rotate</button>
+        <button class="mon-mode-btn" data-rotate="0">Single</button>
+      </div>
+      <div class="mon-rotate-only">
+        <div class="row">
+          <label>Interval <input type="number" id="mon-interval" min="3" max="600"> s</label>
+        </div>
+        <div class="row mon-cats" id="mon-cats"></div>
+      </div>
+      <div class="mon-single-only">
+        <div class="row"><label>Show <select id="mon-cat"></select></label></div>
+      </div>
+    </div>
+  </section>
+
+  <section class="global">
+    <h3>Device</h3>
     <div class="row">
       <label class="switch">Backlight <input type="checkbox" id="backlight" checked></label>
-      <button id="clear-canvas" class="canvas-only">Clear Canvas</button>
+      <label>BG <input type="color" id="bg-color" value="#ff4000"></label>
     </div>
-
-    <h3 class="claude-only">Terminal</h3>
-    <div class="row claude-only">
-      <input type="text" id="term-input" placeholder="Type to send..." autocomplete="off">
-    </div>
-
-    <h3 class="canvas-only">Drawing Pad</h3>
-    <div class="row canvas-only pad-row">
-      <canvas id="pad" width="240" height="240"></canvas>
-    </div>
+    <details class="rem-details">
+      <summary>Reminders</summary>
+      <div class="row">
+        <input type="time" id="rem-time">
+        <input type="text" id="rem-msg" placeholder="Message..." autocomplete="off" maxlength="20">
+      </div>
+      <div class="row">
+        <label class="switch">Daily <input type="checkbox" id="rem-daily"></label>
+        <button id="rem-add">Add</button>
+      </div>
+      <ul id="rem-list" class="rem-list"></ul>
+    </details>
   </section>
 
   <script src="app.js"></script>

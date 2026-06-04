@@ -5,10 +5,14 @@
 namespace mochi {
 
 enum class ModeId : uint8_t {
-    NORMAL_EYES = 0,
-    SQUISH_EYES = 1,
-    CLAUDE_CODE = 2,
-    CANVAS      = 3,
+    NORMAL_EYES   = 0,
+    SQUISH_EYES   = 1,
+    CLAUDE_CODE   = 2,
+    CANVAS        = 3,
+    CLAUDE_STATUS = 4,  // Phase 11：Claude Code 联动状态模式（思考/待确认/待命）
+    FACE_SHOW     = 5,  // Phase 12：表情系统展示 mode（按 face key 渲染 17 表情）
+    PC_MONITOR    = 6,  // Phase 14：PC 监控面板（拉 PC stats.json 圆形显示）
+    REMINDER_OVERLAY = 7,  // Phase 13：提醒触发的瞬态全屏消息（不进 g_state.current_mode）
 };
 
 }  // namespace mochi

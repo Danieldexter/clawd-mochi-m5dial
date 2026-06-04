@@ -196,12 +196,13 @@ lib_deps =
 | Squish eyes（`> <` 眯眼笑） | 保留，改用 M5GFX 矢量描边 + 圆角，避免位图缩放锯齿 |
 | Claude Code 模式（终端文字滚动） | 文字内容限制在以中心为圆心的内接矩形（约 170 × 170 px）内滚动 |
 | Canvas 绘画 | 触摸屏直接绘制 + Web 同步；笔触按圆形 mask 裁剪；颜色/笔粗 Web 控制 |
-| Web AP `ClaWD-Mochi` / `clawd1234` | **保留 SSID 和密码**（保持与原项目一致的用户体验）；改用 AsyncWebServer + WebSocket |
+| Web AP `ClaWD-Mochi` / `clawd1234` | v0.1.0 用此常驻控制 AP；**v0.2.0 Phase 9 起取消**——改为配网开放 AP `Clawd-Mochi-Setup`（**按需进入**：默认开机进设备界面，BtnA 长按或 Settings「Reset WiFi」才进配网）→ 存 NVS → 重启进 STA，正常运行经 `clawd-mochi.local` 访问（见 §9）。AsyncWebServer + WebSocket 保留 |
 | 速度滑块、背景色、笔色 | 保留，Web 面板 UI 重新设计为圆形预览 |
 | 显示开关（背光） | 保留，控制 G9 的 PWM 占空比，0 = 全黑但 MCU 仍运行 |
 | **新增**：旋钮切模式 | 旋转 = 切换 4 种模式；按下 = 进入/退出当前模式的子菜单 |
 | **新增**：触摸手势 | Tap = 触发眨眼或笑；Long-press = 强制切下一模式；Drag（仅 Canvas）= 画线 |
 | **新增**：蜂鸣器音效 | 模式切换 80 ms 短鸣；Canvas 落笔 20 ms 极短"嗒"；Web 客户端连接成功上扬双音 |
+| **新增**：Claude Code 联动状态灯（本项目原创） | hooks 直推 `GET /cc?s={working\|waiting\|idle}` → 设备用 Clawd 表情反映会话态（思考绿点 / 待确认 `!`黄环 / 待命摇摆眼）；非 canvas 表情模式对话时**自动切入**，canvas 不打断；详见 `cc_hooks/`（受 [DemoJj/claude-code-traffic-light](https://github.com/DemoJj/claude-code-traffic-light) 启发）|
 
 ### mumuer1024 二次开发功能（v0.2.0 范围）
 
@@ -209,10 +210,10 @@ lib_deps =
 
 | 二次开发新功能 | M5Dial 适配策略 |
 |--------------|----------------|
-| **WiFi AP 配网** — 首启无凭据建 `Clawd-Mochi-Setup` 开放热点 → 用户填 SSID / 密码 / PC IP → 存 Preferences (NVS) → 重启 STA | 沿用流程；M5Dial 无 GPIO 5，**复位配网改用 BtnA 长按 ≥ 5s**（屏下 WAKE 按钮，M5Dial 库走 `M5Dial.BtnA.pressedFor(5000)`） |
+| **WiFi AP 配网** — 首启无凭据建 `Clawd-Mochi-Setup` 开放热点 → 用户填 SSID / 密码 / PC IP → 存 Preferences (NVS) → 重启 STA | M5Dial 版**默认开机进设备界面**（单机可玩），配网为**按需**：M5Dial 无 GPIO 5，**进配网改用 BtnA 长按 ≥ 5s**（屏下 WAKE，`setHoldThresh(5000)`+`wasHold()`，非破坏性：保留已存凭据）或 Settings「Reset WiFi」；二者经 `requestSetupMode()` 置 NVS 标志 + 重启进入 |
 | **PC Monitor mode** — 设备每 50s 调 `http://<PC_IP>:8080/stats.json`，显示 load / mem / temp / uptime / 时钟 | 圆形布局：中心大字 CPU%，下方一行 mem%，左右弧形条带 temp / uptime；时钟数字居中。文字遵守 §6 安全区（半径 ≤ 110） |
 | **Reminder 系统** — ≤ 5 条定时提醒，触发时全屏消息 30s 后回原 mode；REST CRUD | 提醒列表存 NVS；定时器走 FreeRTOS task；触发通过 ModeManager 切到内置 reminder overlay 模式，超时自动 setMode 回原 |
-| **Face System** — 7 静 + 10 动共 17 表情，**全部代码绘制 6×6 像素块**（非位图，单文件 `faces_code.h` ~ 1100 行） | 算法直接照搬到 `src/faces/faces_data.{h,cpp}`；落点经圆形 mask 裁剪（§6）；单 mode `face_show` 承载所有 face_id |
+| **Face System** — 7 静 + 10 动共 17 表情，原版为 6×6 像素块代码 | **不照搬原 `faces_code.h`**；只保留 `face_wuyu` / `anim_smile` 等命令语义，M5Dial 版重新设计为圆屏友好的矢量/块混合表情；4bpp 离屏渲染；单 mode `face_show` 承载稳定 face key |
 | **Settings 页** — Web 改 PC IP / 重置 WiFi 配置 / 重启 | 复用 AsyncWebServer 多挂一个静态页 + 几个 WS message type；Reset WiFi 调 `Preferences.clear()` 后 `ESP.restart()` |
 | **PC Monitor Python 服务** — Flask + pystray + autostart（Win/Mac/Linux）+ PyInstaller 打包 | 整套 `pc_monitor/` 目录从 mumuer1024 原样搬入项目根；端口 8080，API `GET /stats.json`；与固件解耦 |
 
@@ -272,10 +273,11 @@ clawd-mochi/
 │   │   ├── eyes_squish.{h,cpp}     # v0.1.0
 │   │   ├── claude_code.{h,cpp}     # v0.1.0
 │   │   ├── canvas.{h,cpp}          # v0.1.0
+│   │   ├── claude_status.{h,cpp}   # v0.2.0：Claude Code 联动状态模式（思考/待确认/待命，自绘表情）
 │   │   ├── pc_monitor.{h,cpp}      # v0.2.0：CPU/内存/温度/uptime 圆形面板
-│   │   └── face_show.{h,cpp}       # v0.2.0：单 mode + face_id 承载 17 表情
+│   │   └── face_show.{h,cpp}       # v0.2.0：单 mode + face key 承载 17 表情
 │   ├── faces/
-│   │   └── faces_data.{h,cpp}      # v0.2.0：17 表情 6×6 像素块 procedural 数据 + 绘制
+│   │   └── faces_data.{h,cpp}      # v0.2.0：17 表情 FaceSpec 注册表 + 圆屏重设绘制
 │   ├── services/
 │   │   ├── provisioning.{h,cpp}    # v0.2.0：首启 AP 配网 + NVS 存储
 │   │   └── reminder.{h,cpp}        # v0.2.0：≤5 条提醒 + 定时器
@@ -300,6 +302,9 @@ clawd-mochi/
 │   ├── requirements.txt
 │   ├── start.bat / start.sh
 │   ├── icon/
+│   └── README.md
+├── cc_hooks/                  # v0.2.0：Claude Code 联动 hooks 示例 + 说明（PC 端，纯 curl，零 Python）
+│   ├── settings.example.json
 │   └── README.md
 └── docs/
     ├── pinout.md              # M5Dial 引脚速查（从 §3 摘出）
@@ -341,7 +346,7 @@ PowerShell 用户注意：PowerShell 5.1 不支持 `&&` 链式调用，命令分
 - ❌ **插 USB-C 上电时切勿按住 G0**——长按 G0 + 通电 = ESP32-S3 直接停在 ROM bootloader 等下载命令，**完全不运行用户代码**。症状：烧录成功但 Serial 几乎沉默（仅 `ESP-ROM:esp32s3-20210327` 一行 banner，之后什么都没有）。正常上电就别按 G0；只有进 DFU 烧录失败时才用"按住 G0 → 按一下 RST → 松 RST → 松 G0"手势
 - ❌ **不要在中断 ISR 里调用任何 M5GFX / Serial / Wire / log_x() 函数** —— 这些不是 ISR-safe，会随机崩溃。ISR 里只 set flag，主循环处理
 - ❌ 不要把 SPI 频率拉到 80 MHz 以上——GC9A01 实测 40 MHz 稳定，60 MHz 边缘场景下花屏
-- ❌ 不要同时启用 WiFi STA + AP——会显著掉帧。本项目纯 AP
+- ❌ 不要在**有动画的正常运行态**同时启用 WiFi STA + AP——会显著掉帧。v0.2.0 起网络模型：**默认开机进设备界面（动画）**——有凭据则后台 **STA-only** 连接供 web 控制（`clawd-mochi.local`），无凭据/连接失败则**单机运行**（无网，不自动进配网）；**配网态 AP_STA**（开放 AP + captive portal，STA 空闲仅供 `/scan`，无动画渲染）为**按需进入**——BtnA 长按 5s 或 Settings「Reset WiFi」经 `requestSetupMode()` 置 NVS 标志后重启进入（标志启动时读后即清，一次性）。二者由重启切换，永不在有动画时共存。`begin(setup_mode)` 二选一
 - ❌ 不要尝试 `#include` 原 clawd-mochi 的 `.ino` 文件——驱动栈完全不同，连引脚常量都对不上
 
 ### 容易踩的隐式假设
