@@ -20,6 +20,22 @@
 - **PC Monitor**: shows your computer's CPU / memory / GPU / network / disk and more (requires the companion service running on the PC)
 - **Reminders**: up to 5 daily reminders, full-screen pop-up when due, auto-returns after 30 s
 
+### Demo
+
+Claude Code status link — the device reflects your session state live; view and switch styles from the web:
+
+<p align="center">
+  <img src="docs/images/claude%20Link%20%E8%AE%BE%E5%A4%87%E6%BC%94%E7%A4%BA.png" width="320" alt="Device Claude status link demo">
+  <img src="docs/images/WEB%20claude%20Link.png" width="320" alt="Web Claude Link controls">
+</p>
+
+PC Monitor — a round panel on the device, mirrored live in the browser:
+
+<p align="center">
+  <img src="docs/images/pc%20monitor%20%E8%AE%BE%E5%A4%87%E6%BC%94%E7%A4%BA.png" width="320" alt="Device PC Monitor demo">
+  <img src="docs/images/WEB%20PC%20Monitor.png" width="320" alt="Web PC Monitor mirror">
+</p>
+
 ## Build & flash
 
 Requires [PlatformIO Core](https://platformio.org/install/cli) or VSCode + PlatformIO IDE extension.
