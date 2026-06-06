@@ -18,10 +18,13 @@ public:
     ModeId currentId() const { return current_id_; }
     IMode* currentMode() const { return current_; }
 
+    // v0.3.0：旋钮单击轮询的下一 mode（FACE_SHOW..PC_MONITOR 共 5 个，跳过 REMINDER_OVERLAY）。
+    ModeId nextInCycle() const;
+
 private:
-    IMode* modes_[8]    = {nullptr, nullptr, nullptr, nullptr, nullptr, nullptr, nullptr, nullptr};
+    IMode* modes_[6]    = {nullptr, nullptr, nullptr, nullptr, nullptr, nullptr};
     IMode* current_     = nullptr;
-    ModeId current_id_  = ModeId::NORMAL_EYES;
+    ModeId current_id_  = ModeId::FACE_SHOW;
 };
 
 // 全局实例。Phase 6：ws_handler / ap_server 都需要访问 currentMode + setMode。

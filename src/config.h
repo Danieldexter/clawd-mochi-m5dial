@@ -37,4 +37,14 @@ constexpr long        kTzOffsetSec = 8L * 3600;
 constexpr const char* kNtpServer1  = "pool.ntp.org";
 constexpr const char* kNtpServer2  = "ntp.aliyun.com";
 
+// --- v0.3.0 硬件交互（编码器 / 触摸 / 蜂鸣器 / 自动行为）---
+// 编码器：M5Dial 16 定位 / 64 脉冲每圈 → PJRC read() 每 detent 约 4 count（硬件事实，HW 标定；部分单元为 2）。
+constexpr int32_t  kEncoderCountsPerDetent = 4;
+// Faces 自动行为：动画播一次后静置此时长再随机换下一张（完全随机，可重复同一张）；
+// 单张总停留 = 动画时长 + 此值。旋钮浏览 / 长按锁定可中止。
+constexpr uint32_t kFaceRestMs    = 10000;   // 10s 静置
+// 闲置打盹：Faces 无输入超此时长 → zzz 脸 + 调暗背光；任意输入唤醒。
+constexpr uint32_t kIdleDozeMs    = 180000;  // 3 min
+constexpr uint8_t  kDozeBrightness = 20;     // doze 背光（0..255）；唤醒恢复 state::kBacklightOnLevel
+
 }  // namespace mochi::config

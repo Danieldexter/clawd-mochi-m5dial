@@ -32,4 +32,11 @@ void ModeManager::tick(uint32_t now_ms) {
     }
 }
 
+// v0.3.0：旋钮单击在 FACE_SHOW(0)..PC_MONITOR(4) 5 个 mode 间轮询，跳过 REMINDER_OVERLAY(5)。
+ModeId ModeManager::nextInCycle() const {
+    constexpr uint8_t kCycleCount = 5;  // FACE_SHOW..PC_MONITOR
+    const uint8_t next = (static_cast<uint8_t>(current_id_) + 1) % kCycleCount;
+    return static_cast<ModeId>(next);
+}
+
 }  // namespace mochi

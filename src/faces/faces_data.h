@@ -8,7 +8,9 @@ namespace mochi::faces {
 
 // 表情总数（face_index 合法范围 0..kFaceCount-1）。
 // 命令 key 沿用 mumuer1024 的 7 静 + 10 动语义；视觉为 M5Dial 圆屏重设。
-constexpr uint8_t kFaceCount = 17;
+// v0.3.0：末尾追加 anim_idle（index 17）——移植原 Normal Eyes 摇摆眼，作开机/home 脸。
+constexpr uint8_t kFaceCount = 18;
+constexpr uint8_t kFaceIdle  = 17;  // anim_idle 索引（FaceShow 走连续 drawIdleEyes，非离散帧）
 
 // Web / WS 可见的稳定命令 key 最大长度（含 '\0' 缓冲由 state/config 负责）。
 constexpr uint8_t kFaceKeyMaxLen = 20;
@@ -45,5 +47,9 @@ const char*     keyForIndex(uint8_t face_index);
 // frame 由 FaceShow 的非阻塞状态机计算；静态脸忽略 frame。
 // 不清屏、不 pushSprite —— 由调用方负责（见 face_show::redraw）。
 void drawFace(M5Canvas& fb, uint8_t face_index, uint8_t frame);
+
+// v0.3.0：anim_idle（home 脸）的连续摇摆+眨眼渲染（移植 eyes_normal，改循环以保"活着"）。
+// 与离散帧脱钩——FaceShow 检测 index==kFaceIdle 时每帧调此函数。不清屏、不 pushSprite。
+void drawIdleEyes(M5Canvas& fb, uint32_t now_ms, uint32_t anim_start_ms);
 
 }  // namespace mochi::faces

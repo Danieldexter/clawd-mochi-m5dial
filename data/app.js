@@ -51,6 +51,7 @@ const faces = [
     { key: 'anim_hart',      label: '心跳 / Heart' },
     { key: 'anim_zzz',       label: '睡着了 / Sleep' },
     { key: 'anim_ganga',     label: '尴尬 / Awkward' },
+    { key: 'anim_idle',      label: '待机 / Idle' },
 ];
 
 // Phase 14b：PC Monitor 分类（key 须与 ws_protocol kMonCatNames 同序）

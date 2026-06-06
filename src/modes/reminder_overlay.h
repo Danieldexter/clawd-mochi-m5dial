@@ -28,7 +28,7 @@ private:
     void drawBar(uint32_t now_ms);   // 仅更新底部倒计时条（避免逐帧全屏直绘闪烁）
 
     char     msg_[config::kReminderMsgLen] = {0};
-    ModeId   return_mode_ = ModeId::NORMAL_EYES;
+    ModeId   return_mode_ = ModeId::FACE_SHOW;
     uint32_t start_ms_    = 0;
     int16_t  last_bar_w_  = -1;   // 倒计时条上次宽度（变化才重绘）
 };

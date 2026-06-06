@@ -38,12 +38,10 @@ struct ModeMapping {
     const char* name;
 };
 constexpr ModeMapping kModeMappings[] = {
-    {ModeId::NORMAL_EYES,   "normal_eyes"},
-    {ModeId::SQUISH_EYES,   "squish_eyes"},
+    {ModeId::FACE_SHOW,     "face_show"},      // v0.3.0：统一表情 mode（合并原 Normal/Squish Eyes）
     {ModeId::CLAUDE_CODE,   "claude_code"},
     {ModeId::CANVAS,        "canvas"},
     {ModeId::CLAUDE_STATUS, "claude_status"},  // Phase 11：Claude Code 联动模式
-    {ModeId::FACE_SHOW,     "face_show"},      // Phase 12：表情系统展示 mode
     {ModeId::PC_MONITOR,    "pc_monitor"},     // Phase 14：PC 监控面板
     // REMINDER_OVERLAY 故意不映射：瞬态 overlay 永不进 g_state.current_mode（见 main.cpp 编排）
 };

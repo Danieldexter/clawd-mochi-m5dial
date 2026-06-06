@@ -182,9 +182,9 @@ lib_deps =
                                               Audio (beeper)
 ```
 
-- 主循环 `loop()` 只做：`M5Dial.update()` → 拉取输入事件 → 派发给当前模式 → 调用模式的 `tick()` 渲染
-- 每种模式实现统一接口 `IMode { onEnter(); onExit(); tick(uint32_t now); onInput(Event); }`
-- Web 控制通过 WebSocket 把消息转成同样的 `Event`，与硬件输入走同一条管道
+- 主循环 `loop()`：`M5Dial.update()` → 消费 /cc 与提醒事件 → 派发本地输入（BtnA / 编码器 / 触摸）→ 当前模式 `tick()` 渲染
+- 模式接口 `IMode { onEnter(); onExit(); tick(uint32_t now); applyState(SharedState&); }`（v0.3.0 实现现状：**未**引入 `onInput`/`Event` 抽象——输入在 `loop()` 内直接派发，薄封装 `input/encoder`·`input/touch` 取事件、main.cpp dispatch helper 决定各 mode 行为，§1.2 不做投机抽象）
+- Web 控制经 WebSocket 改 `SharedState` → 调当前模式 `applyState`；本地输入同样改 `SharedState` / `setMode`，两路共用真值源
 
 ---
 
@@ -192,16 +192,16 @@ lib_deps =
 
 | 原项目特性 | M5Dial 适配策略 |
 |-----------|----------------|
-| Normal eyes（像素方眼，摇摆 + 眨眼） | 保留视觉风格，但 X/Y 坐标加圆形剪裁；眼间距从原 `EYE_GAP` 收窄约 20% 以适配 1.28" |
-| Squish eyes（`> <` 眯眼笑） | 保留，改用 M5GFX 矢量描边 + 圆角，避免位图缩放锯齿 |
+| Normal eyes（像素方眼，摇摆 + 眨眼）/ Squish eyes（`> <` 眯眼笑） | **v0.3.0 并入统一 Faces mode**（与 Face System 本质同类）：Normal Eyes 摇摆+眨眼移植为 `anim_idle`（开机/home 脸，FaceShow 连续渲染）；Squish 笑 = 既有 `anim_smile`。不再有独立 eyes mode |
 | Claude Code 模式（终端文字滚动） | 文字内容限制在以中心为圆心的内接矩形（约 170 × 170 px）内滚动 |
 | Canvas 绘画 | 触摸屏直接绘制 + Web 同步；笔触按圆形 mask 裁剪；颜色/笔粗 Web 控制 |
 | Web AP `ClaWD-Mochi` / `clawd1234` | v0.1.0 用此常驻控制 AP；**v0.2.0 Phase 9 起取消**——改为配网开放 AP `Clawd-Mochi-Setup`（**按需进入**：默认开机进设备界面，BtnA 长按或 Settings「Reset WiFi」才进配网）→ 存 NVS → 重启进 STA，正常运行经 `clawd-mochi.local` 访问（见 §9）。AsyncWebServer + WebSocket 保留 |
 | 速度滑块、背景色、笔色 | 保留，Web 面板 UI 重新设计为圆形预览 |
 | 显示开关（背光） | 保留，控制 G9 的 PWM 占空比，0 = 全黑但 MCU 仍运行 |
-| **新增**：旋钮切模式 | 旋转 = 切换 4 种模式；按下 = 进入/退出当前模式的子菜单 |
-| **新增**：触摸手势 | Tap = 触发眨眼或笑；Long-press = 强制切下一模式；Drag（仅 Canvas）= 画线 |
-| **新增**：蜂鸣器音效 | 模式切换 80 ms 短鸣；Canvas 落笔 20 ms 极短"嗒"；Web 客户端连接成功上扬双音 |
+| **新增**（v0.3.0）：旋钮 | **单击** = 5 mode 轮询（Faces→Claude Code→Canvas→Claude Link→PC Monitor）；**旋转 = 上下文拨盘**（Faces 浏览 18 表情 / PC Monitor 切分类卡 / Claude Link 切被监视项目）。长按 5s 仍为进配网 |
+| **新增**（v0.3.0）：触摸手势 | Tap = poke Clawd（Faces 眨/wink 反应）；Long-press = 锁定/解锁自动行为（Faces 轮换 & PC Monitor 切卡）；Canvas 触摸 = 本地画线（原始按压态 `isPressed()`，非 isDragging）|
+| **新增**（v0.3.0）：蜂鸣器音效（`M5Dial.Speaker`，见 §9） | 编码器每 detent 咔 / 切 mode 80ms / Canvas 落笔 20ms / WS 连接上扬双音；彩蛋：开机鸣音、Claude Link 通知（→waiting 注意音·→idle 完成音）、打盹哈欠 |
+| **新增**（v0.3.0）：Faces 自动行为 + 星芒转场 | Faces 动画播一次→静置 ~10s→随机换脸（可重复并重播；旋钮浏览 / 长按锁定可中止）；切 mode 时 Claude 星芒径向擦除转场；Faces 静置 3min 打盹（zzz 脸 + 调暗，任意输入唤醒）|
 | **新增**：Claude Code 联动状态灯（本项目原创） | hooks 直推 `GET /cc?s={working\|waiting\|idle}` → 设备用 Clawd 表情反映会话态（思考绿点 / 待确认 `!`黄环 / 待命摇摆眼）；非 canvas 表情模式对话时**自动切入**，canvas 不打断；详见 `cc_hooks/`（受 [DemoJj/claude-code-traffic-light](https://github.com/DemoJj/claude-code-traffic-light) 启发）|
 
 ### mumuer1024 二次开发功能（v0.2.0 范围）
@@ -250,6 +250,7 @@ lib_deps =
 ### 过渡动画
 - ✅ 适合圆屏：fade（亮度）、radial wipe（从圆心扩散）、rotation
 - ❌ 避免：horizontal slide、vertical scroll 整屏切换（圆屏两侧会露出未定义内容）
+- v0.3.0 切 mode 用 **Claude 星芒径向擦除**（`src/ui/transition.cpp`：由圆心扩张 bg 圆盘 + 8 向前缘星点，≤150ms 一次性同步绘制）
 
 ---
 
@@ -268,28 +269,28 @@ clawd-mochi/
 │   ├── config.h               # 跨 mode 常量（圆屏几何、AP 凭据等）
 │   ├── mode_manager.{h,cpp}   # 模式注册、切换、事件分发
 │   ├── modes/
-│   │   ├── i_mode.h           # 模式接口 IMode
-│   │   ├── eyes_normal.{h,cpp}     # v0.1.0
-│   │   ├── eyes_squish.{h,cpp}     # v0.1.0
+│   │   ├── i_mode.h           # 模式接口 IMode + ModeId enum（v0.3.0：6 槽，去 eyes）
 │   │   ├── claude_code.{h,cpp}     # v0.1.0
 │   │   ├── canvas.{h,cpp}          # v0.1.0
 │   │   ├── claude_status.{h,cpp}   # v0.2.0：Claude Code 联动状态模式（思考/待确认/待命，自绘表情）
-│   │   ├── pc_monitor.{h,cpp}      # v0.2.0：CPU/内存/温度/uptime 圆形面板
-│   │   └── face_show.{h,cpp}       # v0.2.0：单 mode + face key 承载 17 表情
+│   │   ├── pc_monitor.{h,cpp}      # v0.2.0：CPU/内存/温度/uptime 圆形面板（v0.3.0 +nudgeCard 旋钮切卡）
+│   │   └── face_show.{h,cpp}       # v0.2.0 统一表情 mode（v0.3.0：anim_idle 摇摆眼 + tap react + 30s 自动轮换）
 │   ├── faces/
-│   │   └── faces_data.{h,cpp}      # v0.2.0：17 表情 FaceSpec 注册表 + 圆屏重设绘制
+│   │   └── faces_data.{h,cpp}      # v0.2.0：FaceSpec 注册表（v0.3.0：18 表情 + drawIdleEyes）
 │   ├── services/
 │   │   ├── provisioning.{h,cpp}    # v0.2.0：首启 AP 配网 + NVS 存储
 │   │   └── reminder.{h,cpp}        # v0.2.0：≤5 条提醒 + 定时器
 │   ├── input/
-│   │   ├── encoder.{h,cpp}         # v0.3.0：编码器去抖与事件
-│   │   └── touch.{h,cpp}           # v0.3.0：tap / long-press / drag
+│   │   ├── encoder.{h,cpp}         # v0.3.0：M5Dial.Encoder → detent 增量（poll）
+│   │   └── touch.{h,cpp}           # v0.3.0：M5.Touch → tap / long-press / drag
+│   ├── ui/
+│   │   └── transition.{h,cpp}      # v0.3.0：切 mode 星芒径向擦除转场
 │   ├── web/
 │   │   ├── ap_server.{h,cpp}       # AP + AsyncWebServer + LittleFS
 │   │   ├── ws_protocol.h           # v0.1.0：WS 消息类型（mode/stroke/state/reminder/face/monitor）
-│   │   └── ws_handler.{h,cpp}      # WebSocket ↔ Event 双向转换
+│   │   └── ws_handler.{h,cpp}      # WebSocket ↔ SharedState 双向转换
 │   └── audio/
-│       └── beeper.{h,cpp}          # v0.3.0：LEDC 驱 G3 蜂鸣器
+│       └── beeper.{h,cpp}          # v0.3.0：M5Dial.Speaker earcon（非裸 ledc，见 §9）
 ├── data/                      # 通过 `pio run -t uploadfs` 烧到 LittleFS
 │   ├── index.html             # v0.1.0：主控制面板
 │   ├── setup.html             # v0.2.0：首启配网页（AP 模式独占）
@@ -351,10 +352,11 @@ PowerShell 用户注意：PowerShell 5.1 不支持 `&&` 链式调用，命令分
 
 ### 容易踩的隐式假设
 - 圆屏的 framebuffer **仍是 240×240 方形**，写到角落的像素物理上看不到但仍然消耗 SPI 带宽。画板等大数据传输前主动按圆形裁剪
+- **无 PSRAM 离屏 sprite 预算**：`face_show`/`claude_status`/`pc_monitor` 各 4bpp 28KB，在 `onExit` **释放**（v0.3.0 起），只保当前活动 mode；`canvas` 16bpp 115KB 长驻留以存画作。峰值 115+28=143KB。**不要**让多个 mode 的离屏缓冲同时驻留——轮询经 Canvas 后再叠一块 28KB 会 OOM，`createSprite` 失败 → 该 mode 退化成 `fillScreen` 黑屏（v0.3.0 实测踩过：Claude Link 全空）
 - 触摸坐标原点在左上角 (0, 0)，旋钮顺时针 = encoder 值递增
 - M5Dial 屏幕实际可视区域已校准，触摸坐标与屏幕坐标 1:1，不需要变换矩阵
 - RFID 的 RST 引脚是 G8，与屏幕 RESET 复用——所以 v1 不启用 RFID 才安全，未来要用必须重新设计屏幕复位时序
-- 蜂鸣器用 `ledcWriteTone(channel, freq)`，不要用 `tone()`（ESP32 Arduino 上 `tone()` 实现不稳定）
+- 蜂鸣器用 **`M5Dial.Speaker.tone(freq, ms)`**（M5Unified `Speaker_Class`，`M5Dial.begin` 已初始化，后台 task 非阻塞）——**不要**裸 `ledcWriteTone` / Arduino `tone()` 直接占 G3，会与 M5Unified Speaker 驱动争用同一引脚。封装见 `src/audio/beeper.{h,cpp}`（v0.3.0 起。本行更正 v0.2.0 前的旧结论）
 
 ---
 
@@ -372,8 +374,8 @@ PowerShell 用户注意：PowerShell 5.1 不支持 `&&` 链式调用，命令分
 ### v0.3.0+ 候选（M5Dial 硬件增强专属）
 - [ ] RFID 卡片触发表情 / 动画（需重新设计屏幕 / RFID RST 复用时序）
 - [ ] RTC 闹钟联动 Reminder 系统
-- [ ] 电池电量显示与深度休眠唤醒
-- [ ] 编码器 / 触摸完整替代 Web 控制（脱机操作）
+- [ ] 电池电量显示与深度休眠唤醒（v0.3.0 的"闲置打盹"仅显示层调光，非真休眠）
+- [x] ~~编码器 / 触摸完整替代 Web 控制（脱机操作）~~ → **v0.3.0 已实现核心**：旋钮单击轮询 + 旋转拨盘、触摸 tap/长按/drag、蜂鸣器 earcon
 
 这些条目记录在此是为了未来回看时**有意识地**决定要不要加，而不是默默被忘掉。
 

@@ -35,7 +35,7 @@ struct MonitorCfg {
 // 跨 mode 共享的协议真值源（single source of truth）。
 // WS handler 修改这里 → 调当前 mode 的 applyState → 该 mode 决定立即重绘哪些字段。
 struct SharedState {
-    ModeId   current_mode      = ModeId::NORMAL_EYES;
+    ModeId   current_mode      = ModeId::FACE_SHOW;  // v0.3.0：开机 home = 统一表情 mode（anim_idle 摇摆眼）
     uint8_t  speed             = 2;       // 1=fast / 2=normal / 3=slow
     uint16_t bg_color_565      = 0xFA00;  // #ff4000 橙红（默认底色 / 设备身份色）
     uint16_t pen_color_565     = 0x0000;  // #000000 默认（黑色，Phase 7 用）
@@ -45,6 +45,7 @@ struct SharedState {
     CcStyle  cc_style          = CcStyle::CLAWD;  // Phase 11：联动模式视觉风格（NVS 持久化）
     char     cc_scope[config::kCcTokenLen] = {0}; // Phase 11b：联动作用域——选中项目的 CLAUDE_PROJECT_DIR，空=全局（默认）。NVS 持久化
     uint8_t  face_index        = 0;       // Phase 12：face_show 当前表情索引（Web 可见 API 使用 face_key）
+    bool     auto_locked       = false;   // v0.3.0：长按锁定——冻结 Faces 自动轮换 & PC Monitor 自动切卡（运行时，不持久/不广播）
     MonitorCfg monitor;                   // Phase 14b：PC Monitor 面板配置（单显/轮询/间隔/启用分类）
     uint32_t last_broadcast_ms = 0;       // 占位，v0.3.0+ 节流用
 };

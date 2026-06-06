@@ -22,12 +22,19 @@ public:
     // Phase 7：drawDot/drawStroke 只画 sprite，外部批量调用后 flush 一次推送
     void flush();
 
+    // v0.3.0：旋钮清屏。累积旋转 detent，最外圈画进度弧；满半圈(kClearDetents)清屏并返回 true。
+    // 双向旋转均累积；停转由 tick() 超时归零。
+    bool nudgeClear(int detents, uint32_t now_ms);
+
 private:
     M5Canvas sprite_{&M5Dial.Display};
     uint16_t bg_color_ = 0xFFFF;  // 白
     bool     sprite_ready_ = false;
 
-    void drawTestPattern();
+    int16_t  clear_accum_     = 0;  // 已累积清屏 detent（0..kClearDetents）
+    uint32_t clear_rotate_ms_ = 0;  // 最近一次旋转时刻（tick 据此超时归零）
+
+    void drawClearArc();            // 在最外圈画清屏进度弧（直绘 Display，不入 sprite）
 };
 
 }  // namespace mochi

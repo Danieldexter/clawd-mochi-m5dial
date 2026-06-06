@@ -17,17 +17,24 @@ public:
     void   tick(uint32_t now_ms) override;
     void   applyState(const state::SharedState& s) override;
 
+    // v0.3.0：触摸 tap → 临时显示反应脸（wink）~1s 后自动回当前真值脸（poke Clawd）。
+    void   react(uint32_t now_ms);
+    // v0.3.0：自动轮换强制重播 g_state.face_index 当前表情（抽中同一张也从头播）。
+    void   restart(uint32_t now_ms);
+
 private:
     void applyPalette();   // 调色板索引 → RGB565（kBg = 运行时 bg_color_）
     void startFace(uint8_t face_index, uint32_t now_ms);
     uint8_t frameFor(uint32_t now_ms) const;
-    void redraw(uint8_t frame);  // fillSprite(kBg) + drawFace + pushSprite
+    void redraw(uint8_t frame);  // fillSprite(kBg) + drawFace/drawIdleEyes + pushSprite
 
     M5Canvas fb_{&M5Dial.Display};
     bool     fb_ready_      = false;
     uint8_t  shown_face_index_ = 0;
     uint8_t  shown_frame_      = 0;
     uint32_t anim_start_ms_    = 0;
+    uint32_t react_until_ms_   = 0;   // v0.3.0：tap 反应到点时刻（0=无反应中）
+    uint32_t last_idle_ms_     = 0;   // v0.3.0：anim_idle 连续重绘的帧率门控
     uint16_t bg_color_      = 0xFA00;
 };
 

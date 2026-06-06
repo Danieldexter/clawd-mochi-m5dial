@@ -18,6 +18,9 @@ inline void setPal565(M5Canvas& fb, uint8_t idx, uint16_t c) {
                             static_cast<uint8_t>((b5 << 3) | (b5 >> 2)));
 }
 
+constexpr uint32_t kReactMs    = 1000;  // v0.3.0：tap 反应脸（wink）显示时长
+constexpr uint32_t kIdleStepMs = 50;    // v0.3.0：anim_idle 连续重绘步进（摇摆平滑且不过刷）
+
 }  // namespace
 
 void FaceShow::applyPalette() {
@@ -54,7 +57,10 @@ uint8_t FaceShow::frameFor(uint32_t now_ms) const {
 void FaceShow::redraw(uint8_t frame) {
     if (!fb_ready_) return;
     fb_.fillSprite(faces::kBg);
-    faces::drawFace(fb_, shown_face_index_, frame);
+    if (shown_face_index_ == faces::kFaceIdle)
+        faces::drawIdleEyes(fb_, millis(), anim_start_ms_);  // 摇摆眼：连续，按时间取相位
+    else
+        faces::drawFace(fb_, shown_face_index_, frame);
     fb_.pushSprite(0, 0);
 }
 
@@ -82,17 +88,52 @@ void FaceShow::onEnter() {
 }
 
 void FaceShow::onExit() {
-    // fb_ 长驻不释放（28KB；同 claude_status / canvas 策略）。
-    // 这样切回 Faces 时无需重新分配，代价可控；硬件实测继续看三块 sprite 共存 headroom。
+    // v0.3.0：退出即释放 28KB（轮询轮到 Canvas 115KB 时避免共存 OOM）；onEnter 惰性重建。
+    if (fb_ready_) { fb_.deleteSprite(); fb_ready_ = false; }
 }
 
 void FaceShow::tick(uint32_t now_ms) {
     if (!fb_ready_) return;
+
+    // tap 反应到点 → 回到当前真值脸（g_state.face_index）。
+    if (react_until_ms_ != 0 && now_ms >= react_until_ms_) {
+        react_until_ms_ = 0;
+        startFace(state::g_state.face_index, now_ms);
+        redraw(shown_frame_);
+        return;
+    }
+
+    // anim_idle：连续摇摆+眨眼，按帧率门控每帧重绘（与离散帧路径脱钩）。
+    if (shown_face_index_ == faces::kFaceIdle) {
+        if (now_ms - last_idle_ms_ >= kIdleStepMs) {
+            last_idle_ms_ = now_ms;
+            redraw(0);  // idle 忽略 frame，redraw 内按 millis 取相位
+        }
+        return;
+    }
+
     const uint8_t frame = frameFor(now_ms);
     if (frame != shown_frame_) {
         shown_frame_ = frame;
         redraw(shown_frame_);
     }
+}
+
+// 触摸 tap：临时眨一下（wink）~1s 后自动回当前真值脸。仅改 shown_，不动 g_state.face_index
+// （web 仍显真值脸；若反应期间编码器/轮换改了 g_state，回切即落新值）。
+void FaceShow::react(uint32_t now_ms) {
+    if (!fb_ready_) return;
+    startFace(faces::findByKey("anim_jiyanjing"), now_ms);
+    react_until_ms_ = now_ms + kReactMs;
+    redraw(0);
+}
+
+// 自动轮换：强制从头重播 g_state.face_index（即使抽中同一张也重播；取消进行中的 tap 反应）。
+void FaceShow::restart(uint32_t now_ms) {
+    if (!fb_ready_) return;
+    react_until_ms_ = 0;
+    startFace(state::g_state.face_index, now_ms);
+    redraw(0);
 }
 
 void FaceShow::applyState(const state::SharedState& s) {

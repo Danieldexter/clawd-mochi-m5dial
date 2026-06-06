@@ -18,6 +18,9 @@ public:
     void   tick(uint32_t now_ms) override;
     void   applyState(const state::SharedState& s) override;
 
+    // v0.3.0：编码器在本 mode 步进当前分类卡（enabled∧available 间双向移动 + 暂停自动轮询一拍）。
+    void   nudgeCard(int delta);
+
 private:
     void applyPalette();      // 固定槽（kBg/kInk/kWhite/kDim/kTrack）；kAccent 每卡在 redraw 重涂
     void redraw();            // 拷贝 snapshot → fillSprite + chrome + 当前卡 → pushSprite 一次

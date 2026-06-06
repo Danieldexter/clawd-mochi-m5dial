@@ -23,26 +23,14 @@
   <div id="status" class="connecting">connecting...</div>
 
   <nav class="modes">
-    <button class="mode-btn" data-mode="normal_eyes"><span class="ic">&#128064;</span>Normal Eyes</button>
-    <button class="mode-btn" data-mode="squish_eyes"><span class="ic">&#128518;</span>Squish Eyes</button>
+    <button class="mode-btn" data-mode="face_show"><span class="ic">&#128512;</span>Faces</button>
     <button class="mode-btn" data-mode="claude_code"><span class="ic">&#9000;</span>Claude Code</button>
     <button class="mode-btn" data-mode="canvas"><span class="ic">&#127912;</span>Canvas</button>
     <button class="mode-btn" data-mode="claude_status"><span class="ic">&#10022;</span>Claude Link</button>
-    <button class="mode-btn" data-mode="face_show"><span class="ic">&#128512;</span>Faces</button>
     <button class="mode-btn" data-mode="pc_monitor"><span class="ic">&#128202;</span>PC Monitor</button>
   </nav>
 
   <section class="panels">
-    <!-- Normal + Squish Eyes：共用 Speed -->
-    <div class="panel" data-panel="normal_eyes squish_eyes">
-      <h3>Speed</h3>
-      <div class="row">
-        <button class="speed-btn" data-speed="1">Fast</button>
-        <button class="speed-btn" data-speed="2">Normal</button>
-        <button class="speed-btn" data-speed="3">Slow</button>
-      </div>
-    </div>
-
     <!-- Claude Code：终端输入 -->
     <div class="panel" data-panel="claude_code">
       <h3>Terminal</h3>
@@ -64,7 +52,7 @@
       </div>
     </div>
 
-    <!-- Claude Link：会话状态展示 -->
+    <!-- Claude Link：会话状态展示 + idle 节奏（speed 唯一消费者）-->
     <div class="panel" data-panel="claude_status">
       <h3>Claude Link</h3>
       <div class="cc-box">
@@ -72,6 +60,12 @@
         <div id="cc-scope-info" class="cc-scope">All projects</div>
       </div>
       <a href="settings.html" class="settings-link">Configure style &amp; scope &rarr;</a>
+      <h3>Idle Speed</h3>
+      <div class="row">
+        <button class="speed-btn" data-speed="1">Fast</button>
+        <button class="speed-btn" data-speed="2">Normal</button>
+        <button class="speed-btn" data-speed="3">Slow</button>
+      </div>
     </div>
 
     <!-- Faces：表情下拉 -->

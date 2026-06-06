@@ -277,7 +277,9 @@ void ClaudeStatus::onEnter() {
 }
 
 void ClaudeStatus::onExit() {
-    // fb_ 长驻不释放（28KB；与 Canvas 同策略，便于反复自动切入时免重建）。
+    // v0.3.0：退出即释放 28KB（轮询经 Canvas 115KB 后 SRAM 紧张，避免共存 OOM）；
+    // onEnter 惰性重建，redraw 从 g_state 无损还原。
+    if (fb_ready_) { fb_.deleteSprite(); fb_ready_ = false; }
 }
 
 void ClaudeStatus::tick(uint32_t now_ms) {

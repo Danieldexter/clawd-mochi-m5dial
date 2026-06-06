@@ -367,6 +367,26 @@ void PcMonitor::advanceCard() {
     for (int k = 0; k < 6; ++k) { c = (uint8_t)((c + 1) % 6); if (mask & (1u << c)) { active_cat_ = c; return; } }
 }
 
+// v0.3.0：编码器步进。沿 delta 方向逐 detent 跳到下一个 enabled∧available 分类；重置
+// last_switch_ms_ 暂停自动轮询一拍（不改 rotate_/NVS，纯运行时浏览）。
+void PcMonitor::nudgeCard(int delta) {
+    if (delta == 0 || !fb_ready_) return;
+    const uint8_t mask = enabled_mask_ & pcmon::availableMask();
+    if (!mask) return;
+    const int dir = (delta > 0) ? 1 : -1;
+    int steps = (delta > 0) ? delta : -delta;
+    uint8_t c = active_cat_;
+    while (steps-- > 0) {
+        for (int k = 0; k < 6; ++k) {            // 该方向上找下一张有效卡
+            c = (uint8_t)((c + dir + 6) % 6);
+            if (mask & (1u << c)) break;
+        }
+    }
+    active_cat_     = c;
+    last_switch_ms_ = millis();
+    redraw();
+}
+
 void PcMonitor::redraw() {
     if (!fb_ready_) return;
 
@@ -441,7 +461,9 @@ void PcMonitor::onEnter() {
 }
 
 void PcMonitor::onExit() {
-    g_active = false;  // 暂停轮询；task 空转不删（fb_ 长驻不释放，同 face_show 策略）
+    g_active = false;  // 暂停轮询；task 空转不删
+    // v0.3.0：释放 28KB（同 face_show / claude_status，避免与 Canvas 115KB 共存 OOM）。
+    if (fb_ready_) { fb_.deleteSprite(); fb_ready_ = false; }
 }
 
 void PcMonitor::tick(uint32_t now_ms) {
@@ -453,7 +475,7 @@ void PcMonitor::tick(uint32_t now_ms) {
 
     bool changed = false;
     if (seq != last_seq_) { last_seq_ = seq; changed = true; }            // 数据刷新
-    if (rotate_ && (now_ms - last_switch_ms_) >= interval_ms_) {          // 轮询切卡
+    if (rotate_ && !state::g_state.auto_locked && (now_ms - last_switch_ms_) >= interval_ms_) {  // 轮询切卡（锁定时停）
         advanceCard();
         last_switch_ms_ = now_ms;
         changed = true;

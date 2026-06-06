@@ -24,16 +24,17 @@ constexpr FaceSpec kFaces[kFaceCount] = {
     {"face_yes",       "Yes",       "对号",   false, 1, 1, true,  240},
     {"face_X",         "No",        "叉叉",   false, 1, 1, true,  240},
     {"face_glass",     "Glasses",   "墨镜",   false, 1, 1, true,  240},
-    {"anim_jiyanjing", "Wink",      "挤眼睛", true,  3, 3, false, 180},
-    {"anim_yun",       "Dizzy",     "晕晕",   true,  3, 3, false, 170},
-    {"anim_close",     "Close",     "闭眼睛", true,  3, 3, false, 190},
-    {"anim_dead",      "Dead",      "死掉了", true,  3, 3, true,  210},
+    {"anim_jiyanjing", "Wink",      "挤眼睛", true,  3, 1, false, 180},
+    {"anim_yun",       "Dizzy",     "晕晕",   true,  3, 1, false, 170},
+    {"anim_close",     "Close",     "闭眼睛", true,  3, 1, false, 190},
+    {"anim_dead",      "Dead",      "死掉了", true,  3, 1, true,  210},
     {"anim_dian",      "Wait",      "等等",   true,  3, 1, true,  260},
-    {"anim_smile",     "Smile",     "笑笑",   true,  2, 3, false, 210},
-    {"anim_look",      "Look",      "看你",   true,  3, 3, false, 220},
-    {"anim_hart",      "Heart",     "心跳",   true,  2, 3, false, 210},
+    {"anim_smile",     "Smile",     "笑笑",   true,  2, 1, false, 210},
+    {"anim_look",      "Look",      "看你",   true,  3, 1, false, 220},
+    {"anim_hart",      "Heart",     "心跳",   true,  2, 1, false, 210},
     {"anim_zzz",       "Sleep",     "睡着了", true,  3, 1, true,  360},
     {"anim_ganga",     "Awkward",   "尴尬",   true,  3, 1, true,  300},
+    {"anim_idle",      "Idle",      "待机",   true,  1, 1, false, 0},  // v0.3.0 home：摇摆眼（FaceShow 走 drawIdleEyes 连续渲染，帧字段名义）
 };
 
 inline uint8_t clampFrame(uint8_t face_index, uint8_t frame) {
@@ -307,8 +308,33 @@ void drawFace(M5Canvas& fb, uint8_t face_index, uint8_t frame) {
         case 14: drawHeartBeat(fb, frame); break;
         case 15: drawSleep(fb, frame); break;
         case 16: drawAwkward(fb, frame); break;
+        case 17: eyesPair(fb, 0, 0, 0, 0, true); break;  // anim_idle 静态后备（连续动画由 FaceShow::drawIdleEyes）
         default: drawDeadpan(fb); break;
     }
+}
+
+// v0.3.0：anim_idle 连续摇摆 + 眨眼。移植 eyes_normal 的 timeline，改为循环
+// （原版播一次后定格，这里 % total 循环以保持"活着"的招牌摇摆）。用 faces 招牌方眼
+// primitive（eyesPair）保与其余表情同语言；几何与原 Normal Eyes 一致（kLeftX/kRightX/kEyeYT）。
+void drawIdleEyes(M5Canvas& fb, uint32_t now_ms, uint32_t anim_start_ms) {
+    struct Step { uint16_t dur; int8_t dx; bool closed; };
+    static constexpr Step tl[] = {
+        {180, -8, false}, {180, -4, false}, {180, 0, false}, {180, 4, false},
+        {180,  8, false}, {180,  4, false}, {180, 0, false}, {180, -4, false},
+        {120,  0, true},  {130,  0, false}, {120, 0, true},  {900,  0, false},  // 双眨 + 停顿后循环
+    };
+    constexpr uint8_t n = sizeof(tl) / sizeof(tl[0]);
+    uint32_t total = 0;
+    for (const auto& s : tl) total += s.dur;
+    const uint32_t e = (now_ms - anim_start_ms) % total;
+    uint32_t acc = 0;
+    const Step* cur = &tl[n - 1];
+    for (uint8_t i = 0; i < n; ++i) {
+        acc += tl[i].dur;
+        if (e < acc) { cur = &tl[i]; break; }
+    }
+    if (cur->closed) eyesPair(fb, cur->dx, 0, kEyeH, 0, false);  // 闭眼 = 上眼睑全遮罩（眼消失）
+    else             eyesPair(fb, cur->dx, 0, 0, 0, true);       // 睁眼 + 白 glint
 }
 
 }  // namespace mochi::faces

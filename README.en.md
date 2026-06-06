@@ -22,18 +22,26 @@
 
 ### Demo
 
-Claude Code status link — the device reflects your session state live; view and switch styles from the web:
+Claude Code status link — the device reflects your session state live:
 
 <p align="center">
   <img src="docs/images/claude%20Link%20%E8%AE%BE%E5%A4%87%E6%BC%94%E7%A4%BA.jpg" width="320" alt="Device Claude status link demo">
-  <img src="docs/images/WEB%20claude%20Link.png" width="320" alt="Web Claude Link controls">
 </p>
 
-PC Monitor — a round panel on the device, mirrored live in the browser:
+PC Monitor — a round panel on the device:
 
 <p align="center">
   <img src="docs/images/pc%20monitor%20%E8%AE%BE%E5%A4%87%E6%BC%94%E7%A4%BA.jpg" width="320" alt="Device PC Monitor demo">
-  <img src="docs/images/WEB%20PC%20Monitor.png" width="320" alt="Web PC Monitor mirror">
+</p>
+
+Web control panels (open `clawd-mochi.local` in any browser):
+
+<p align="center">
+  <img src="docs/images/web%20faces.png" width="190" alt="Web Faces panel">
+  <img src="docs/images/web%20canvas.png" width="190" alt="Web Canvas panel">
+  <img src="docs/images/web%20claude%20code.png" width="190" alt="Web Claude Code panel">
+  <img src="docs/images/WEB%20claude%20Link.png" width="190" alt="Web Claude Link panel">
+  <img src="docs/images/WEB%20PC%20Monitor.png" width="190" alt="Web PC Monitor panel">
 </p>
 
 ## Build & flash

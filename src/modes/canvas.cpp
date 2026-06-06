@@ -19,6 +19,16 @@ inline bool inside(int16_t x, int16_t y) {
     return dx * dx + dy * dy <= kSafeR2;
 }
 
+// v0.3.0 旋钮清屏：转半圈（kClearDetents detent，16 detent/圈）填满最外圈进度弧 → 清屏；
+// 停转 kClearIdleMs 自动归零。LovyanGFX fillArc：0°=3 点钟、顺时针 → 270°=12 点钟起填。
+constexpr int16_t  kClearDetents    = 8;        // 半圈
+constexpr uint32_t kClearIdleMs     = 800;      // 停转超时归零（ms）
+constexpr int16_t  kClearRingR0     = 110;      // 进度弧内半径（贴安全圈外缘，最外圈）
+constexpr int16_t  kClearRingR1     = 118;      // 进度弧外半径
+constexpr int16_t  kClearArcStart   = 270;      // 12 点钟起
+constexpr uint16_t kClearArcColor   = 0xFA00;   // 橙红（醒目"即将清屏"）
+constexpr uint16_t kClearTrackColor = 0x39C8;   // 弧底槽深灰
+
 }  // namespace
 
 void Canvas::drawDot(int16_t x, int16_t y, uint16_t color) {
@@ -50,27 +60,38 @@ void Canvas::flush() {
     if (sprite_ready_) sprite_.pushSprite(0, 0);
 }
 
-void Canvas::drawTestPattern() {
-    drawStroke( 60,  75,  95,  90, TFT_RED);
-    drawStroke( 95,  90, 135,  82, TFT_RED);
-    drawStroke(135,  82, 170,  95, TFT_RED);
+bool Canvas::nudgeClear(int detents, uint32_t now_ms) {
+    if (!sprite_ready_ || detents == 0) return false;
+    clear_rotate_ms_ = now_ms;
+    clear_accum_ += static_cast<int16_t>(detents > 0 ? detents : -detents);  // 双向均累积
+    if (clear_accum_ >= kClearDetents) {
+        clear_accum_ = 0;
+        clear(bg_color_);          // fillSprite + pushSprite：整屏重推顺带擦掉进度弧
+        return true;
+    }
+    drawClearArc();
+    return false;
+}
 
-    drawStroke( 80, 135, 120, 115, TFT_BLUE);
-    drawStroke(120, 115, 160, 135, TFT_BLUE);
-
-    drawStroke( 70, 165, 100, 158, TFT_GREEN);
-    drawStroke(100, 158, 140, 168, TFT_GREEN);
-    drawStroke(140, 168, 170, 160, TFT_GREEN);
-
-    drawDot( 90, 110, TFT_MAGENTA);
-    drawDot(120, 105, TFT_ORANGE);
-    drawDot(150, 110, TFT_CYAN);
+void Canvas::drawClearArc() {
+    auto& d = M5Dial.Display;
+    d.fillArc(kCx, kCy, kClearRingR0, kClearRingR1, 0, 360, kClearTrackColor);  // 底槽整圈
+    const int16_t sweep = static_cast<int16_t>(360L * clear_accum_ / kClearDetents);
+    if (sweep <= 0) return;
+    const int16_t s = kClearArcStart % 360;   // 270（12 点钟）
+    const int16_t e = s + sweep;              // 顺时针展开（accum<kClearDetents 故 sweep<360）
+    if (e <= 360) d.fillArc(kCx, kCy, kClearRingR0, kClearRingR1, s, e, kClearArcColor);
+    else {                                    // 跨 360 回绕（同 pc_monitor fillArcWrap）
+        d.fillArc(kCx, kCy, kClearRingR0, kClearRingR1, s, 360, kClearArcColor);
+        d.fillArc(kCx, kCy, kClearRingR0, kClearRingR1, 0, e - 360, kClearArcColor);
+    }
 }
 
 void Canvas::onEnter() {
     bg_color_ = state::g_state.bg_color_565;
+    clear_accum_ = 0;                 // 进入即清零清屏进度（防离场时残留）
     if (!sprite_ready_) {
-        // 首次进入：创建 sprite + 测试图案
+        // 首次进入：创建 sprite，空白画布
         sprite_.setPsram(true);
         sprite_.setColorDepth(16);
         sprite_ready_ = sprite_.createSprite(240, 240);
@@ -80,7 +101,6 @@ void Canvas::onEnter() {
             return;
         }
         sprite_.fillSprite(bg_color_);
-        drawTestPattern();
     }
     // 已有 sprite：保留之前画的内容，仅推送回屏幕
     sprite_.pushSprite(0, 0);
@@ -91,7 +111,11 @@ void Canvas::onExit() {
 }
 
 void Canvas::tick(uint32_t now_ms) {
-    (void)now_ms;
+    // 旋钮清屏进度：停转超时 → 归零并重推画布覆盖掉最外圈进度弧
+    if (clear_accum_ > 0 && now_ms - clear_rotate_ms_ >= kClearIdleMs) {
+        clear_accum_ = 0;
+        flush();
+    }
 }
 
 void Canvas::applyState(const state::SharedState& s) {

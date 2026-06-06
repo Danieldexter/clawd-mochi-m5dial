@@ -5,7 +5,29 @@
 
 ## [Unreleased]
 
-（v0.3.0 候选：编码器 / 触摸输入接管本地操作、蜂鸣器音效，见 `docs/workflow.md` roadmap）
+## [0.3.0] - 2026-06-06
+
+v0.3.0（M5Dial 硬件交互 + 模式整合，Phase 17-19；详见 `git log v0.2.0..v0.3.0` 与 `docs/v030_spec.md`）。
+
+### Added
+
+- **旋转编码器本地操作**：单击旋钮在 5 mode 间轮询（Faces → Claude Code → Canvas → Claude Link → PC Monitor）；旋转 = 上下文拨盘（Faces 浏览 18 表情 / PC Monitor 切分类卡 / Claude Link 切被监视项目 / Canvas 转半圈清屏）
+- **触摸手势**：Tap = poke Clawd（Faces 眨眼/wink 反应）；长按 = 锁定/解锁自动行为（Faces 轮换 & PC Monitor 切卡）；Canvas 触摸 = 本地画线（圆形 mask 内，原始按压态）
+- **Canvas 设备端清屏**：旋钮转半圈（8 detent）填满最外圈橙红进度弧 → 清屏；停转 0.8s 自动归零、双向旋转均累积（进度弧可见 + 半圈阈值避免误触）；首次进入改为空白画布（移除开发期测试图案）
+- **蜂鸣器音效**（`M5Dial.Speaker`）：编码器 detent 咔 / 切 mode 80ms / Canvas 落笔 20ms / WS 连接上扬双音
+- **Faces 自动轮换**：动画播一次→静置 10s→随机换一张（可重复并重播；旋钮浏览 / 长按锁定可中止）
+- **Claude 风味彩蛋**：开机唤醒鸣音；Claude Link 声音通知（会话转 waiting 注意音 / 转 idle 完成音，环境通知器）；切 mode 时 Claude 星芒径向擦除转场；Faces 静置 3min 打盹（zzz 脸 + 调暗，任意输入唤醒）
+- 招牌摇摆眼表情 `anim_idle`（移植原 Normal Eyes，作开机/home 脸；Faces 17 → 18）
+
+### Changed
+
+- **模式整合**：Normal Eyes / Squish Eyes 并入统一 Faces mode（本质同为"画表情"）；开机默认进 Faces（home = `anim_idle` 摇摆眼）；`ModeId` 重编号为 6 槽（`FACE_SHOW`=0 .. `REMINDER_OVERLAY`=5）
+- Web 面板移除两个 eyes mode chip（nav 按设备轮询序重排）；Speed 控件迁入 Claude Link 面板（claude_status idle 节奏是其唯一消费者）
+- **CLAUDE.md §9 更正**：蜂鸣器改用 `M5Dial.Speaker.tone()`，不再裸 `ledcWriteTone`（会与 M5Unified Speaker 驱动争用 G3）
+
+### Removed
+
+- `src/modes/eyes_normal.{h,cpp}` / `src/modes/eyes_squish.{h,cpp}`（功能并入 Faces mode）
 
 ## [0.2.0] - 2026-06-04
 
