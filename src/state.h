@@ -45,6 +45,7 @@ struct SharedState {
     CcStyle  cc_style          = CcStyle::CLAWD;  // Phase 11：联动模式视觉风格（NVS 持久化）
     char     cc_scope[config::kCcTokenLen] = {0}; // Phase 11b：联动作用域——选中项目的 CLAUDE_PROJECT_DIR，空=全局（默认）。NVS 持久化
     uint8_t  face_index        = 0;       // Phase 12：face_show 当前表情索引（Web 可见 API 使用 face_key）
+    uint8_t  gif_index         = 0;       // v0.4.0：GIF 图库当前播放槽（0..3；Web 高亮 + 入 mode 初始槽）
     bool     auto_locked       = false;   // v0.3.0：长按锁定——冻结 Faces 自动轮换 & PC Monitor 自动切卡（运行时，不持久/不广播）
     MonitorCfg monitor;                   // Phase 14b：PC Monitor 面板配置（单显/轮询/间隔/启用分类）
     uint32_t last_broadcast_ms = 0;       // 占位，v0.3.0+ 节流用

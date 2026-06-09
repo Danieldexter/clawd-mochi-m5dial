@@ -223,6 +223,19 @@ void handleSetMonitor(const JsonDocument& doc) {
     WebStack::broadcastState();
 }
 
+// ── v0.4.0：GIF 图库选择 / 删除 ──────────────────────────────────────────────
+// WS 跑在 AsyncTCP 上下文：只 stash 命令，FS 操作 / 解码 / 绘屏延迟到 loop 执行（§1.6，仿 /cc）。
+
+void handleGifSelect(const JsonDocument& doc) {
+    if (!doc["index"].is<int>()) return;
+    WebStack::requestGifCmd(GifCmd::Select, doc["index"].as<int>());
+}
+
+void handleGifDelete(const JsonDocument& doc) {
+    if (!doc["index"].is<int>()) return;
+    WebStack::requestGifCmd(GifCmd::Delete, doc["index"].as<int>());
+}
+
 void dispatchMessage(uint8_t* data, size_t len) {
     JsonDocument doc;
     const DeserializationError err = deserializeJson(doc, data, len);
@@ -254,6 +267,8 @@ void dispatchMessage(uint8_t* data, size_t len) {
     else if (strcmp(type, kTypeReminderAdd)    == 0) handleReminderAdd(doc);
     else if (strcmp(type, kTypeReminderDel)    == 0) handleReminderDel(doc);
     else if (strcmp(type, kTypeSetMonitor)     == 0) handleSetMonitor(doc);
+    else if (strcmp(type, kTypeGifSelect)      == 0) handleGifSelect(doc);
+    else if (strcmp(type, kTypeGifDelete)      == 0) handleGifDelete(doc);
     else Serial.printf("[WS] unknown type: %s\n", type);
 }
 

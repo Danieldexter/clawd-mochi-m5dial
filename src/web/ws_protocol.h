@@ -28,6 +28,8 @@ constexpr const char* kTypeSetFace       = "set_face";      // Phase 12：face_s
 constexpr const char* kTypeReminderAdd   = "reminder_add";  // Phase 13：新增提醒（字段 hour/minute/daily/msg）
 constexpr const char* kTypeReminderDel   = "reminder_del";  // Phase 13：删除提醒（字段 index）
 constexpr const char* kTypeSetMonitor    = "set_monitor";   // Phase 14b：PC Monitor 面板配置（字段 rotate/interval/single/cats[]）
+constexpr const char* kTypeGifSelect     = "gif_select";    // v0.4.0：选择图库槽播放（字段 index）
+constexpr const char* kTypeGifDelete     = "gif_delete";    // v0.4.0：删除图库槽（字段 index）
 
 // === Device → Client message types ===
 constexpr const char* kTypeState         = "state";
@@ -43,6 +45,7 @@ constexpr ModeMapping kModeMappings[] = {
     {ModeId::CANVAS,        "canvas"},
     {ModeId::CLAUDE_STATUS, "claude_status"},  // Phase 11：Claude Code 联动模式
     {ModeId::PC_MONITOR,    "pc_monitor"},     // Phase 14：PC 监控面板
+    {ModeId::GIF_PLAYER,    "gif_player"},     // v0.4.0：Web 上传 GIF 循环播放
     // REMINDER_OVERLAY 故意不映射：瞬态 overlay 永不进 g_state.current_mode（见 main.cpp 编排）
 };
 

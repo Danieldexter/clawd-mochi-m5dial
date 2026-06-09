@@ -15,6 +15,7 @@
 #include "modes/claude_status.h"
 #include "modes/face_show.h"
 #include "modes/pc_monitor.h"
+#include "modes/gif_player.h"
 #include "modes/reminder_overlay.h"
 #include "faces/faces_data.h"
 #include "input/encoder.h"
@@ -23,6 +24,7 @@
 #include "ui/transition.h"
 #include "services/provisioning.h"
 #include "services/reminder.h"
+#include "services/gif_store.h"
 #include "web/ap_server.h"
 
 #include <esp_random.h>
@@ -47,6 +49,7 @@ static mochi::Canvas         g_canvas;
 static mochi::ClaudeStatus   g_claude_status;
 static mochi::FaceShow       g_face_show;
 static mochi::PcMonitor      g_pc_monitor;
+static mochi::GifPlayer      g_gif_player;
 static mochi::ReminderOverlay g_reminder_overlay;
 
 // ── v0.3.0 dispatch 运行时态 ──
@@ -117,6 +120,7 @@ static void handleEncoder(uint32_t now) {
             break;
         }
         case ModeId::PC_MONITOR:    g_pc_monitor.nudgeCard(d); break;
+        case ModeId::GIF_PLAYER:    g_gif_player.nudgeIndex(d); web::WebStack::broadcastState(); break;  // 图库切换
         case ModeId::CLAUDE_STATUS: stepCcScope(d);            break;
         case ModeId::CANVAS:        if (g_canvas.nudgeClear(d, now)) beeper::success(); break;  // 转半圈清屏
         default: break;  // CLAUDE_CODE：旋转 no-op
@@ -202,12 +206,18 @@ void setup() {
     g_mochi.registerMode(&g_claude_status);
     g_mochi.registerMode(&g_face_show);
     g_mochi.registerMode(&g_pc_monitor);
+    g_mochi.registerMode(&g_gif_player);
     g_mochi.registerMode(&g_reminder_overlay);
+    g_gif_player.attachCanvas(&g_canvas);  // GIF 进入时释放 Canvas 115KB（大缓冲互斥，§9）
+    g_pc_monitor.attachCanvas(&g_canvas);  // 同理：轮询经 Canvas 到 PC Monitor，否则 28KB OOM 黑屏（§9）
+    g_claude_status.attachCanvas(&g_canvas);  // 同理：含 /cc 自动切入 Claude Link（§9）
+    g_face_show.attachCanvas(&g_canvas);  // 同理：web 直跳 Canvas→Faces（§9）
 
     // 启动决策（v0.2.0）：默认进设备界面（动画），配网为按需（详见 CLAUDE.md §9）。
     const bool force_setup = provisioning::consumeSetupRequest();
     const bool has_creds   = provisioning::begin();
     mochi::reminder::begin();  // Phase 13：载入 NVS 提醒表
+    mochi::gif_store::begin();  // v0.4.0：挂 LittleFS + /gifs 目录（离线也能播 GIF）
 
     if (force_setup) {
         provisioning::startSetupAP();
@@ -269,7 +279,7 @@ void loop() {
                 }
                 state::g_state.cc_status = cc;
                 const auto cur = g_mochi.currentId();
-                if (cur != ModeId::CANVAS && cur != ModeId::REMINDER_OVERLAY) {  // canvas / 闹钟不打断
+                if (cur != ModeId::CANVAS && cur != ModeId::GIF_PLAYER && cur != ModeId::REMINDER_OVERLAY) {  // canvas / GIF / 闹钟不打断
                     if (cur != ModeId::CLAUDE_STATUS) {
                         state::g_state.current_mode = ModeId::CLAUDE_STATUS;
                         g_mochi.setMode(ModeId::CLAUDE_STATUS);  // 自动切入联动
@@ -277,6 +287,20 @@ void loop() {
                         m->applyState(state::g_state);  // 已在联动：刷新状态表情
                     }
                 }
+            }
+            web::WebStack::broadcastState();
+        }
+        // v0.4.0：消费 Web 暂存的 GIF 图库命令（loop 上下文做 FS / 解码 / 绘屏，§1.6）
+        web::GifCmd gcmd; int gidx;
+        if (web::WebStack::consumeGifCmd(gcmd, gidx)) {
+            const bool in_gif = (g_mochi.currentId() == ModeId::GIF_PLAYER);
+            if (gcmd == web::GifCmd::Delete) {
+                if (in_gif) g_gif_player.deleteSlot(gidx);
+                else        mochi::gif_store::removeAt(gidx);
+            } else if (gcmd == web::GifCmd::Select) {
+                if (in_gif) g_gif_player.selectIndex(gidx);
+                else if (gidx >= 0 && gidx < mochi::gif_store::count())
+                    state::g_state.gif_index = static_cast<uint8_t>(gidx);  // 非 GIF 模式：入 mode 时生效
             }
             web::WebStack::broadcastState();
         }

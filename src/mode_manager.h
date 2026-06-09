@@ -18,11 +18,11 @@ public:
     ModeId currentId() const { return current_id_; }
     IMode* currentMode() const { return current_; }
 
-    // v0.3.0：旋钮单击轮询的下一 mode（FACE_SHOW..PC_MONITOR 共 5 个，跳过 REMINDER_OVERLAY）。
+    // v0.3.0：旋钮单击轮询的下一 mode（FACE_SHOW..GIF_PLAYER 共 6 个，跳过 REMINDER_OVERLAY）。
     ModeId nextInCycle() const;
 
 private:
-    IMode* modes_[6]    = {nullptr, nullptr, nullptr, nullptr, nullptr, nullptr};
+    IMode* modes_[7]    = {nullptr, nullptr, nullptr, nullptr, nullptr, nullptr, nullptr};
     IMode* current_     = nullptr;
     ModeId current_id_  = ModeId::FACE_SHOW;
 };

@@ -1,5 +1,7 @@
 #include "claude_status.h"
 
+#include "canvas.h"          // releaseSprite()：onEnter 释放 Canvas 115KB（大缓冲互斥，§9）
+
 #include <M5Dial.h>
 #include <cmath>
 #include <esp_random.h>
@@ -252,6 +254,7 @@ void ClaudeStatus::redrawBase() {
 // ───────────────────────── 生命周期 ─────────────────────────
 
 void ClaudeStatus::onEnter() {
+    if (canvas_) canvas_->releaseSprite();  // 释放 Canvas 115KB（否则轮询经 Canvas / cc 自动切入时本 mode 28KB OOM → 黑屏，§9）
     speed_        = state::g_state.speed;
     bg_color_     = state::g_state.bg_color_565;
     shown_status_ = state::g_state.cc_status;

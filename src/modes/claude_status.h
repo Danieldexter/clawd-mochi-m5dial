@@ -7,6 +7,8 @@
 
 namespace mochi {
 
+class Canvas;  // 前置声明：onEnter 调 canvas_->releaseSprite() 腾出大缓冲预算（与 Canvas 115KB 互斥，§9）
+
 // Phase 11（抛光）：Claude Code 联动状态模式 —— 双可选风格 × 三态。
 // 由 /cc 端点的 hook 事件驱动（写 g_state.cc_status），用表情/动效反映会话状态。
 // 风格由 g_state.cc_style 决定（web 选择器 + NVS 持久化）：
@@ -25,6 +27,10 @@ public:
     void   onExit()  override;
     void   tick(uint32_t now_ms) override;
     void   applyState(const state::SharedState& s) override;
+
+    // v0.4.0：main setup 注入 Canvas。onEnter 调 canvas_->releaseSprite() 释放其 115KB——否则轮询
+    // 经 Canvas（或 /cc 自动切入）到本 mode 时 28KB createSprite OOM → 黑屏（CLAUDE.md §9）。
+    void   attachCanvas(Canvas* c) { canvas_ = c; }
 
 private:
     // ── 静态层（仅状态/风格/背景变化时）──
@@ -70,6 +76,7 @@ private:
     // sprite 共存（spec §1 只用 8 色，16 槽调色板绰绰有余，且保 RGB565 精确显色）。
     M5Canvas fb_{&M5Dial.Display};
     bool     fb_ready_ = false;
+    Canvas*  canvas_   = nullptr; // 大缓冲互斥：onEnter 释放其 115KB sprite（§9）
     bool     dirty_    = false;   // 本帧是否有元素改动 → 决定是否 pushSprite
 
     // ── 眨眼子机 ──

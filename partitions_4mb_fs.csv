@@ -1,0 +1,11 @@
+# clawd-mochi v0.4.0 custom partition table -- no OTA (CLAUDE.md section 10), frees ~4.7MB LittleFS for the GIF gallery.
+# Default 8MB table (dual OTA app) leaves only ~1.5MB FS; tight for four <=512KB GIFs. Drop app1, single factory app.
+# nvs kept at standard 0x9000 / 0x5000 -> stored WiFi credentials survive a partition-table reflash.
+# FS partition name "spiffs" (Arduino LittleFS.begin default label + PlatformIO uploadfs default target).
+# NOTE: keep this file ASCII-only -- PlatformIO's partition parser reads it with the system locale codec (GBK on zh-CN Windows).
+# Name,     Type, SubType,  Offset,    Size
+nvs,        data, nvs,      0x9000,    0x5000
+otadata,    data, ota,      0xe000,    0x2000
+app0,       app,  factory,  0x10000,   0x330000
+spiffs,     data, spiffs,   0x340000,  0x4B0000
+coredump,   data, coredump, 0x7F0000,  0x10000

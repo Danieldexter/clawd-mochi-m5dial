@@ -44,5 +44,8 @@ $RECYCLE.BIN/
 # Local handover doc (per CLAUDE.md §11.5)
 docs/workflow.md
 
+# GIF 测试素材（meme 图有版权，§10：固件不打包任何 GIF）——本地验证用，不入仓
+docs/gif/
+
 # Claude Code 本地会话元数据（权限缓存等，与用户机器绑定）
 .claude/

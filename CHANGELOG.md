@@ -5,6 +5,34 @@
 
 ## [Unreleased]
 
+## [0.4.0] - 2026-06-09
+
+v0.4.0 GIF Player —— Web 上传 GIF，设备端 bitbank2 AnimatedGIF 从 LittleFS 流式解码循环播放（详见 `git log v0.3.0..v0.4.0`）。
+
+### Added
+
+- **GIF Player 模式**（第 6 个轮询 mode）：Web 上传 GIF（≤240px / ≤512KB / 图库 ≤4 张）→ 设备端 AnimatedGIF 流式解码循环播放、缩放铺满圆屏（圆形物理边框天然裁角）；旋钮切图库，Web 选择/删除。
+- **GIF 上传管道**：HTTP `POST /gif/upload`（分块写 temp → 校验 GIF 头 → rename 空槽）+ WS `gif_select`/`gif_delete`（AsyncTCP 只暂存、loop 做 FS/解码/绘屏，§1.6 仿 `/cc`）；state 广播 `gifs[]`/`gif_index`。
+- `src/modes/gif_player.{h,cpp}` + `src/services/gif_store.{h,cpp}`（LittleFS `/gifs/` 连续槽 + 删除压缩前移，独立挂 FS 离线可播）。
+- **自定义分区表 `partitions_4mb_fs.csv`**：去 OTA，LittleFS ~1.5MB→~4.7MB 容图库；nvs 同址保 WiFi 凭据（换表后需 `uploadfs`）。
+
+### Changed
+
+- **`ModeId` 扩为 7 槽**（新增 `GIF_PLAYER`，`REMINDER_OVERLAY` 顺延为 6）；旋钮单击轮询 6 个 mode（Faces → Claude Code → Canvas → Claude Link → PC Monitor → GIF）。
+- **大缓冲预算**：GIF 与 Canvas 共享，进 GIF 释放 Canvas 115KB sprite（二者不共存，规避无 PSRAM OOM）；AnimatedGIF 改文件内静态单例（+24KB .bss，杜绝堆碎片）。已知代价：切到 GIF / Faces / Claude Link / PC Monitor 再回 Canvas 会清空画板涂鸦。
+- GIF 模式与 Canvas 一样**不被** Claude Code `/cc` 事件自动打断。
+
+### Fixed
+
+- **Faces / Claude Link / PC Monitor 进入时释放 Canvas 115KB**：补齐 §9"同时只驻留一块大离屏缓冲"不变式（此前仅 GIF 遵守）——修旋钮轮询经 Canvas 后进这三个 mode 时 28KB 离屏缓冲 `createSprite` OOM、退化纯黑屏（只剩背光）；Web 直跳不经 Canvas 故无此症（即"web 切几次又好了"）。
+- **GIF 透明背景按 disposal method 逐帧处理**：上一帧非 do-not-dispose 则只擦上一帧矩形恢复背景——消移动残影、不误抹静止边缘、不闪"上下黑长条"。
+- **GIF 彩色"绿边"**：调色板改 `GIF_PALETTE_RGB565_BE`，匹配 M5GFX sprite `pushImage` 默认大端（原 `_LE` 致彩色字节交换显绿）。
+
+### Notes
+
+- 固件**不打包任何 GIF**（月薪猫等 meme 图有版权）；全部运行时 Web 上传。设备仅压电蜂鸣器，**不播放音乐**。
+- 源 GIF 限 ≤240px（设备无 PSRAM，解码缓冲为原生尺寸 16bpp sprite）；前端上传前已按尺寸/大小/扩展校验拦截。
+
 ## [0.3.0] - 2026-06-06
 
 v0.3.0（M5Dial 硬件交互 + 模式整合，Phase 17-19；详见 `git log v0.2.0..v0.3.0` 与 `docs/v030_spec.md`）。

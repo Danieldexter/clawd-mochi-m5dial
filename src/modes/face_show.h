@@ -6,6 +6,8 @@
 
 namespace mochi {
 
+class Canvas;  // 前置声明：onEnter 调 canvas_->releaseSprite() 腾出大缓冲预算（与 Canvas 115KB 互斥，§9）
+
 // Phase 12：Face System 展示 mode —— 按 g_state.face_index 渲染 faces_data 注册表。
 // 沿用 claude_status 的 4bpp 离屏后备缓冲套路（本板无 PSRAM，省 SRAM 与
 // Canvas 的 115KB 共存）；动画用 tick() 非阻塞播放，每帧仅一次 pushSprite。
@@ -22,6 +24,10 @@ public:
     // v0.3.0：自动轮换强制重播 g_state.face_index 当前表情（抽中同一张也从头播）。
     void   restart(uint32_t now_ms);
 
+    // v0.4.0：main setup 注入 Canvas。onEnter 调 canvas_->releaseSprite() 释放其 115KB——否则
+    // web 直跳 Canvas→Faces 时 115KB 仍驻留，28KB createSprite OOM → 黑屏（CLAUDE.md §9）。
+    void   attachCanvas(Canvas* c) { canvas_ = c; }
+
 private:
     void applyPalette();   // 调色板索引 → RGB565（kBg = 运行时 bg_color_）
     void startFace(uint8_t face_index, uint32_t now_ms);
@@ -30,6 +36,7 @@ private:
 
     M5Canvas fb_{&M5Dial.Display};
     bool     fb_ready_      = false;
+    Canvas*  canvas_        = nullptr;  // 大缓冲互斥：onEnter 释放其 115KB sprite（§9）
     uint8_t  shown_face_index_ = 0;
     uint8_t  shown_frame_      = 0;
     uint32_t anim_start_ms_    = 0;

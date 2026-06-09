@@ -1,5 +1,6 @@
 #include "face_show.h"
 
+#include "canvas.h"          // releaseSprite()：onEnter 释放 Canvas 115KB（大缓冲互斥，§9）
 #include "../state.h"
 #include "../faces/faces_data.h"
 
@@ -65,6 +66,7 @@ void FaceShow::redraw(uint8_t frame) {
 }
 
 void FaceShow::onEnter() {
+    if (canvas_) canvas_->releaseSprite();  // 释放 Canvas 115KB（否则 web 直跳 Canvas→Faces 时本 mode 28KB OOM → 黑屏，§9）
     bg_color_ = state::g_state.bg_color_565;
     startFace(state::g_state.face_index, millis());
 
@@ -74,7 +76,7 @@ void FaceShow::onEnter() {
         fb_ready_ = (fb_.createSprite(240, 240) != nullptr);
         if (fb_ready_) {
             applyPalette();
-            // 实测关键：先进过 Canvas(115KB)+Claude Link(28KB) 再进此，看三块共存 headroom。
+            // onEnter 已释放 Canvas 115KB（§9 单大缓冲），此 freeheap 反映"仅本 mode 28KB + WiFi"余量。
             Serial.printf("[face_show] fb 4bpp ok, freeheap=%u\n", ESP.getFreeHeap());
         } else {
             Serial.println("[face_show] fb createSprite FAILED -> direct fallback");

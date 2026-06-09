@@ -8,6 +8,7 @@
 #include "../services/provisioning.h"
 #include "../services/reminder.h"
 #include "../modes/pc_monitor.h"   // pcmon::availableMask（Phase 14b state 广播）
+#include "../services/gif_store.h" // v0.4.0：图库列表 + 上传写入
 
 #include <WiFi.h>
 #include <LittleFS.h>
@@ -32,6 +33,12 @@ bool fs_ok = false;
 volatile bool            g_cc_pending = false;
 volatile state::CcStatus g_pending_cc = state::CcStatus::IDLE;
 char                     g_pending_project[config::kCcTokenLen] = {0};  // 最近一次 /cc 的 ?p=（AsyncTCP 写、loop 读）
+
+// v0.4.0：GIF 图库命令暂存（同上：AsyncTCP 写、loop 读）+ 上传结果（onUpload 写、onRequest 读）。
+volatile bool   g_gif_pending = false;
+volatile GifCmd g_gif_cmd     = GifCmd::None;
+volatile int    g_gif_idx     = -1;
+int             g_upload_slot = -2;   // -2 进行中 / -1 失败 / >=0 成功槽
 
 // 序列化当前 SharedState 为 JSON 字符串
 String buildStateJson() {
@@ -83,6 +90,16 @@ String buildStateJson() {
     for (uint8_t i = 0; i < protocol::kMonCatCount; ++i) {
         if (av & (1u << i)) avail.add(protocol::monCatName(i));
     }
+
+    // v0.4.0：GIF 图库列表 + 当前播放槽（Web 渲染 + 高亮）
+    JsonArray gifs = doc["gifs"].to<JsonArray>();
+    for (int i = 0; i < gif_store::count(); ++i) {
+        JsonObject o = gifs.add<JsonObject>();
+        o["slot"]  = i;
+        o["bytes"] = static_cast<uint32_t>(gif_store::sizeAt(i));
+    }
+    doc["gif_index"] = state::g_state.gif_index;
+    doc["gif_max"]   = gif_store::kMaxSlots;
 
     String out;
     serializeJson(doc, out);
@@ -152,6 +169,29 @@ void handleCcStatus(AsyncWebServerRequest* req) {
     req->send(200, "text/plain", "ok");
 }
 
+// v0.4.0：POST /gif/upload —— onUpload 分块写 LittleFS（esp_littlefs 内部互斥，安全对抗 loop 解码读）；
+// onRequest（全部块收完后）回结果。写入目标是新 freeSlot（非正在播放的槽），故无 rename-over-open 冲突。
+void handleGifUpload(AsyncWebServerRequest* /*req*/, const String& /*filename*/, size_t index,
+                     uint8_t* data, size_t len, bool final) {
+    if (index == 0) g_upload_slot = gif_store::uploadBegin() ? -2 : -1;   // 首块：开 temp（满则 -1）
+    if (g_upload_slot == -1) return;                                      // 已失败：丢弃后续块
+    if (len && !gif_store::uploadChunk(data, len)) { g_upload_slot = -1; return; }  // 超 512KB 中止
+    if (final) g_upload_slot = gif_store::uploadFinish();                 // 校验 GIF 头 + rename → 槽 or -1
+}
+
+void handleGifUploadDone(AsyncWebServerRequest* req) {
+    const int slot = g_upload_slot;
+    g_upload_slot = -2;
+    if (slot >= 0) {
+        char body[40];
+        snprintf(body, sizeof(body), "{\"ok\":true,\"slot\":%d}", slot);
+        req->send(200, "application/json", body);
+        WebStack::requestGifCmd(GifCmd::Select, slot);  // loop：在 GIF 模式则重载到新槽，并广播图库
+    } else {
+        req->send(400, "application/json", "{\"ok\":false}");  // 满 / 非 GIF / 写失败
+    }
+}
+
 }  // namespace
 
 namespace WebStack {
@@ -181,6 +221,7 @@ void begin(bool setup_mode) {
         ws.onEvent(onWsEvent);
         server.addHandler(&ws);
         server.on("/cc", HTTP_GET, handleCcStatus);  // Phase 11：Claude Code hook 推状态
+        server.on("/gif/upload", HTTP_POST, handleGifUploadDone, handleGifUpload);  // v0.4.0：上传 GIF
         if (fs_ok) {
             server.serveStatic("/", LittleFS, "/").setDefaultFile("index.html");
         }
@@ -212,6 +253,15 @@ bool consumeCcEvent(state::CcStatus& out, char* project_out, size_t project_cap)
     out = g_pending_cc;
     if (project_out && project_cap) snprintf(project_out, project_cap, "%s", g_pending_project);
     g_cc_pending = false;
+    return true;
+}
+
+void requestGifCmd(GifCmd cmd, int index) {
+    g_gif_cmd = cmd; g_gif_idx = index; g_gif_pending = true;
+}
+bool consumeGifCmd(GifCmd& cmd, int& index) {
+    if (!g_gif_pending) return false;
+    cmd = g_gif_cmd; index = g_gif_idx; g_gif_pending = false;
     return true;
 }
 

@@ -1,5 +1,6 @@
 #include "pc_monitor.h"
 
+#include "canvas.h"          // releaseSprite()：onEnter 释放 Canvas 115KB（大缓冲互斥，§9）
 #include "../config.h"
 #include "../state.h"
 #include "../services/provisioning.h"
@@ -426,6 +427,7 @@ void PcMonitor::redraw() {
 }
 
 void PcMonitor::onEnter() {
+    if (canvas_) canvas_->releaseSprite();  // 释放 Canvas 115KB（否则轮询经 Canvas 后本 mode 28KB createSprite OOM → 黑屏，§9）
     syncCfg();
     g_net_peak = 1.0f;
 

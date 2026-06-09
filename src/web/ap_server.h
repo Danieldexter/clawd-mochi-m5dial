@@ -5,6 +5,13 @@
 // 前置声明：consumeCcEvent 用 CcStatus 引用（固定底层类型枚举，前置声明足够）
 namespace mochi::state { enum class CcStatus : uint8_t; }
 
+namespace mochi::web {
+
+// v0.4.0：GIF 图库命令。WS 回调（AsyncTCP 上下文）只 stash；loop 消费后做 FS/解码/绘屏（§1.6）。
+enum class GifCmd : uint8_t { None, Select, Delete };
+
+}  // namespace mochi::web
+
 namespace mochi::web::WebStack {
 
 // 启动 LittleFS + AsyncWebServer。WiFi 由 provisioning 在调用本函数前拉起（§9）。
@@ -25,5 +32,9 @@ void broadcastState();
 // /cc handler 跑在 AsyncTCP 上下文，只暂存；切模式 / 绘屏延迟到 loop 执行（避开 async 绘屏竞争，§1.6）。
 // 有待处理事件则填 out（状态）+ project_out（发起项目，?p= 解码后，可空串）+ 清标志 + 返回 true。
 bool consumeCcEvent(state::CcStatus& out, char* project_out, size_t project_cap);
+
+// v0.4.0：GIF 图库命令。ws_handler（AsyncTCP）调 requestGifCmd 暂存；loop 调 consumeGifCmd 取出执行。
+void requestGifCmd(GifCmd cmd, int index);
+bool consumeGifCmd(GifCmd& cmd, int& index);
 
 }  // namespace mochi::web::WebStack

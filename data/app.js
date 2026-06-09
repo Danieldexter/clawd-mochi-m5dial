@@ -21,8 +21,13 @@ const ccScopeInfoEl  = document.getElementById('cc-scope-info');
 const pcClockEl      = document.getElementById('pc-clock');
 const pcStatsEl      = document.getElementById('pc-stats');
 const pcHintEl       = document.getElementById('pc-hint');
+const gifFileEl      = document.getElementById('gif-file');
+const gifUploadBtn   = document.getElementById('gif-upload');
+const gifListEl      = document.getElementById('gif-list');
+const gifHintEl      = document.getElementById('gif-hint');
 
 let ws = null;
+let lastMode = '';
 let reconnectTimer = null;
 let pcIp = '';
 let pcPollTimer = null;
@@ -229,6 +234,85 @@ function renderReminders(list) {
     });
 }
 
+// v0.4.0：GIF 图库渲染（每次 state 广播重建；高亮当前播放槽，Play/✕ 发 WS gif_select/gif_delete）
+function gifHint(t) { if (gifHintEl) gifHintEl.textContent = t; }
+
+function renderGifs(s) {
+    if (!gifListEl) return;
+    const gifs = s.gifs || [];
+    const max  = s.gif_max || 4;
+    const cur  = s.gif_index;
+    gifListEl.innerHTML = '';
+    if (!gifs.length) {
+        const li = document.createElement('li');
+        li.className = 'gif-empty';
+        li.textContent = 'No GIFs yet — upload one above.';
+        gifListEl.appendChild(li);
+    } else {
+        gifs.forEach(g => {
+            const li = document.createElement('li');
+            li.className = 'gif-item' + (g.slot === cur ? ' playing' : '');
+            const name = document.createElement('span');
+            name.className = 'gif-name';
+            name.textContent = 'GIF ' + (g.slot + 1) + ' · ' + Math.round((g.bytes || 0) / 1024) + ' KB';
+            const play = document.createElement('button');
+            play.textContent = (g.slot === cur) ? '▶ playing' : 'Play';
+            play.disabled = (g.slot === cur);
+            play.addEventListener('click', () => {
+                send({ type: 'gif_select', index: g.slot });
+                if (lastMode !== 'gif_player') send({ type: 'set_mode', id: 'gif_player' });
+            });
+            const del = document.createElement('button');
+            del.className = 'gif-del';
+            del.textContent = '✕';
+            del.addEventListener('click', () => send({ type: 'gif_delete', index: g.slot }));
+            li.appendChild(name);
+            li.appendChild(play);
+            li.appendChild(del);
+            gifListEl.appendChild(li);
+        });
+    }
+    gifUploadBtn.disabled = gifs.length >= max;
+    if (document.activeElement !== gifFileEl) {
+        gifHint(gifs.length >= max
+            ? `Gallery full (${max}) — delete one to add more`
+            : `≤240px · ≤512KB · ${gifs.length}/${max} used`);
+    }
+}
+
+// 上传：客户端先校验扩展/大小/尺寸（≤240px），再 POST /gif/upload；设备成功后经 WS 广播刷新列表
+function uploadGif() {
+    const f = gifFileEl.files && gifFileEl.files[0];
+    if (!f) { gifHint('Choose a GIF first'); return; }
+    if (!/\.gif$/i.test(f.name) && f.type !== 'image/gif') { gifHint('Not a GIF'); return; }
+    if (f.size > 512 * 1024) { gifHint('Too big (max 512KB)'); return; }
+    gifUploadBtn.disabled = true;
+    gifHint('Checking…');
+    const img = new Image();
+    const url = URL.createObjectURL(f);
+    img.onload = () => {
+        URL.revokeObjectURL(url);
+        if (img.naturalWidth > 240 || img.naturalHeight > 240) {
+            gifHint(`Too large ${img.naturalWidth}×${img.naturalHeight} (max 240px)`);
+            gifUploadBtn.disabled = false;
+            return;
+        }
+        gifHint('Uploading…');
+        const fd = new FormData();
+        fd.append('gif', f, f.name);
+        fetch('/gif/upload', { method: 'POST', body: fd })
+            .then(r => r.json().catch(() => ({ ok: r.ok })))
+            .then(j => {
+                gifUploadBtn.disabled = false;
+                if (j && j.ok) { gifHint('Uploaded ✓'); gifFileEl.value = ''; }
+                else gifHint('Rejected (full / not a GIF / >512KB)');
+            })
+            .catch(() => { gifUploadBtn.disabled = false; gifHint('Upload failed'); });
+    };
+    img.onerror = () => { URL.revokeObjectURL(url); gifUploadBtn.disabled = false; gifHint('Not a valid image'); };
+    img.src = url;
+}
+
 // Phase 14b：PC Monitor 配置 —— 收集控件 → set_monitor
 function sendMonitor() {
     const activeBtn = document.querySelector('.mon-mode-btn.active');
@@ -283,6 +367,8 @@ function applyState(s) {
     if (ccScopeInfoEl) ccScopeInfoEl.textContent = scopeLabel(s);
     // Phase 13：提醒列表
     renderReminders(s.reminders);
+    renderGifs(s);                 // v0.4.0：GIF 图库列表 + 高亮
+    lastMode = s.mode;
     // BG 变化时同步清本地 pad（设备端已被 set_bg_color / clear_canvas 清屏）
     if (bgChanged) clearPad(s.bg_color);
 }
@@ -365,6 +451,7 @@ clearCanvasBtn.addEventListener('click', () => {
     send({ type: 'clear_canvas', hex: bgColorEl.value });
     clearPad(bgColorEl.value);
 });
+gifUploadBtn.addEventListener('click', uploadGif);
 
 termInputEl.addEventListener('keydown', (e) => {
     if (e.key === 'Enter') {

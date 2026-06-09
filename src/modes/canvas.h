@@ -26,6 +26,10 @@ public:
     // 双向旋转均累积；停转由 tick() 超时归零。
     bool nudgeClear(int detents, uint32_t now_ms);
 
+    // v0.4.0：释放 115KB sprite（GIF_PLAYER onEnter 调用，让两大缓冲不共存，见 CLAUDE.md §9）。
+    // 无 sprite 则 no-op；下次 Canvas::onEnter 懒重建空白画布（画作会丢，是已知代价）。
+    void releaseSprite();
+
 private:
     M5Canvas sprite_{&M5Dial.Display};
     uint16_t bg_color_ = 0xFFFF;  // 白

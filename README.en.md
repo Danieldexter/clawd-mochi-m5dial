@@ -19,6 +19,7 @@
 - **Claude Code status link** (original to this project): with hooks configured, the device's expression reflects your session state in real time — working / waiting / idle
 - **PC Monitor**: shows your computer's CPU / memory / GPU / network / disk and more (requires the companion service running on the PC)
 - **Reminders**: up to 5 daily reminders, full-screen pop-up when due, auto-returns after 30 s
+- **GIF Player** (v0.4.0): upload a GIF from the web UI (≤240px / ≤512KB, gallery of up to 4); the device decodes and loops it, filling the round screen. Rotate the encoder to switch GIFs; delete from the web.
 
 ### Demo
 

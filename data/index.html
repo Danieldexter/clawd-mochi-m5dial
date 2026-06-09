@@ -13,6 +13,13 @@
   .rem-item .rem-text { flex:1; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
   .rem-item .rem-tag  { color:#888; font-size:11px; }
   .rem-item button    { background:#3a2222; border:1px solid #633; color:#f88; padding:2px 9px; }
+  .gif-list { list-style:none; padding:0; margin:6px 0 0; }
+  .gif-item { display:flex; align-items:center; gap:8px; padding:6px 8px; margin:4px 0;
+              background:#222; border:1px solid #333; border-radius:4px; font-size:13px; color:#ddd; }
+  .gif-item.playing { border-color:#5dd; }
+  .gif-item .gif-name { flex:1; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
+  .gif-item .gif-del  { background:#3a2222; border:1px solid #633; color:#f88; padding:2px 9px; }
+  .gif-empty { color:#888; font-size:13px; padding:6px 2px; }
 </style>
 </head>
 <body>
@@ -28,6 +35,7 @@
     <button class="mode-btn" data-mode="canvas"><span class="ic">&#127912;</span>Canvas</button>
     <button class="mode-btn" data-mode="claude_status"><span class="ic">&#10022;</span>Claude Link</button>
     <button class="mode-btn" data-mode="pc_monitor"><span class="ic">&#128202;</span>PC Monitor</button>
+    <button class="mode-btn" data-mode="gif_player"><span class="ic">&#127902;</span>GIF</button>
   </nav>
 
   <section class="panels">
@@ -99,6 +107,17 @@
       <div class="mon-single-only">
         <div class="row"><label>Show <select id="mon-cat"></select></label></div>
       </div>
+    </div>
+
+    <!-- GIF Player：上传 + 图库（≤4 张，旋钮可切换）-->
+    <div class="panel" data-panel="gif_player">
+      <h3>GIF Player</h3>
+      <div class="row">
+        <input type="file" id="gif-file" accept="image/gif">
+        <button id="gif-upload">Upload</button>
+      </div>
+      <p class="hint-text" id="gif-hint">&#8804;240px &middot; &#8804;512KB &middot; up to 4 GIFs</p>
+      <ul id="gif-list" class="gif-list"></ul>
     </div>
   </section>
 

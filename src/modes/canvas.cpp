@@ -110,6 +110,15 @@ void Canvas::onExit() {
     // Phase 7：保留 sprite 不释放（PSRAM 115 KB 长占无碍），便于切回时还原笔画
 }
 
+void Canvas::releaseSprite() {
+    // v0.4.0：GIF_PLAYER 进入时调用——释放 115KB 让 GIF 解码缓冲有内存（二者互斥，见 CLAUDE.md §9）。
+    if (sprite_ready_) {
+        sprite_.deleteSprite();
+        sprite_ready_ = false;
+        Serial.println("[canvas] sprite released (gif_player took the big-buffer budget)");
+    }
+}
+
 void Canvas::tick(uint32_t now_ms) {
     // 旋钮清屏进度：停转超时 → 归零并重推画布覆盖掉最外圈进度弧
     if (clear_accum_ > 0 && now_ms - clear_rotate_ms_ >= kClearIdleMs) {
